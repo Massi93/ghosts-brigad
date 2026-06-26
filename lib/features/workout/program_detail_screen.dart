@@ -17,19 +17,21 @@ class ProgramDetailScreen extends StatelessWidget {
   final WorkoutProgram program;
 
   Future<void> _finish(BuildContext context) async {
-    await context.read<WorkoutProvider>().markCompleted(program.id);
-    await context
-        .read<GamificationProvider>()
-        .addPoints(AppConstants.pointsPerWorkout);
-    await context.read<GamificationProvider>().unlockBadge('badge_first_workout');
-    await context
-        .read<GamificationProvider>()
-        .progressChallenge('ch_week3', 1);
-    await context.read<ProgressProvider>().addEntry(
-          weightKg: context.read<ProgressProvider>().latestWeight ?? 72,
-          workoutsCompleted: 1,
-          caloriesBurned: program.estimatedCalories,
-        );
+    // Capture everything that depends on `context` BEFORE awaiting, so we never
+    // use a BuildContext across an async gap.
+    final workout = context.read<WorkoutProvider>();
+    final game = context.read<GamificationProvider>();
+    final progress = context.read<ProgressProvider>();
+
+    await workout.markCompleted(program.id);
+    await game.addPoints(AppConstants.pointsPerWorkout);
+    await game.unlockBadge('badge_first_workout');
+    await game.progressChallenge('ch_week3', 1);
+    await progress.addEntry(
+      weightKg: progress.latestWeight ?? 72,
+      workoutsCompleted: 1,
+      caloriesBurned: program.estimatedCalories,
+    );
     if (!context.mounted) return;
     showDialog(
       context: context,

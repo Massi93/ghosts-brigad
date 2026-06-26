@@ -1,0 +1,48 @@
+name: FitFlow CI
+
+# Validates that the FitFlow Flutter app analyzes and tests cleanly on every
+# push / PR that touches the app. This is the compile-time guarantee that
+# cannot be produced inside the restricted dev container.
+
+on:
+  push:
+    paths:
+      - "fitflow/**"
+      - ".github/workflows/fitflow-ci.yml"
+  pull_request:
+    paths:
+      - "fitflow/**"
+      - ".github/workflows/fitflow-ci.yml"
+
+# Allow manual runs from the Actions tab.
+  workflow_dispatch:
+
+jobs:
+  analyze-and-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fitflow
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.24.5
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test

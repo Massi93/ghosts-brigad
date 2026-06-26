@@ -50,14 +50,11 @@ class NutritionPlanScreen extends StatelessWidget {
                 meal: m,
                 logged: nutrition.isLogged(m.id),
                 onToggle: () async {
+                  final game = context.read<GamificationProvider>();
                   await nutrition.toggleMealLogged(m.id);
                   if (nutrition.isLogged(m.id)) {
-                    await context
-                        .read<GamificationProvider>()
-                        .addPoints(AppConstants.pointsPerMealLogged);
-                    await context
-                        .read<GamificationProvider>()
-                        .progressChallenge('ch_hydration', 1);
+                    await game.addPoints(AppConstants.pointsPerMealLogged);
+                    await game.progressChallenge('ch_hydration', 1);
                   }
                 },
               )),
