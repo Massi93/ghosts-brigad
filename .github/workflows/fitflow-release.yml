@@ -3,11 +3,13 @@ name: FitFlow Release Build
 # Builds a downloadable Android APK for FitFlow and attaches it to a GitHub
 # Release. Triggered by pushing a tag (v*) or manually via "Run workflow".
 #
-# Native folders (android/ios) are gitignored, so they are regenerated with
-# `flutter create .` before building — this also validates the full native
-# build, not just static analysis.
+# Uses the latest stable Flutter so the freshly-resolved plugins (firebase,
+# package_info_plus, etc.) match the Android toolchain. This job does not run
+# `flutter analyze`, so analyzer deprecations are irrelevant here — the app
+# still compiles. The main CI keeps its pinned Flutter for analysis.
 #
-# Without signing secrets the APK is debug-signed (installable for testing).
+# Native folders are gitignored and regenerated with `flutter create`. Without
+# signing secrets the APK is debug-signed (installable for testing).
 
 on:
   push:
@@ -49,15 +51,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Flutter
+      - name: Set up Flutter (latest stable)
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.24.5
           cache: true
 
-      - name: Generate native project
-        run: flutter create . --platforms=android,ios,web --project-name fitflow --org com.fitflow
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Generate native Android project
+        run: flutter create . --platforms=android --project-name fitflow --org com.fitflow
 
       - name: Raise Android minSdk to 23 (required by Firebase)
         run: |
@@ -70,12 +74,6 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
-
-      - name: Generate launcher icons
-        run: dart run flutter_launcher_icons
-
-      - name: Generate splash screen
-        run: dart run flutter_native_splash:create
 
       - name: Build APK (release, debug-signed)
         run: flutter build apk --release
@@ -102,6 +100,7 @@ jobs:
 
             ⚠️ Active « Installer des applications inconnues » sur Android.
             L'app tourne en mode local (sans backend) : coach IA hors-ligne,
-            données stockées sur l'appareil.
+            données stockées sur l'appareil. Icône Flutter par défaut sur ce
+            build de test.
           files: fitflow/dist/*.apk
           fail_on_unmatched_files: true
