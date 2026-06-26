@@ -39,8 +39,8 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
               children: [
                 if (!premium)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
                     child: _FreeBanner(
                       text:
                           'Version gratuite : accès aux programmes & ${AppConstants.freeExerciseLimit} exercices de base.',

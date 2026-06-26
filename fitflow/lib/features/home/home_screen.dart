@@ -48,9 +48,8 @@ class HomeScreen extends StatelessWidget {
                       Text('Salut, ${profile.name} 👋',
                           style: const TextStyle(
                               fontSize: 24, fontWeight: FontWeight.w800)),
-                      Text('Prêt à te dépasser aujourd\'hui ?',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary)),
+                      const Text('Prêt à te dépasser aujourd\'hui ?',
+                          style: TextStyle(color: AppColors.textSecondary)),
                     ],
                   ),
                 ),
@@ -232,12 +231,12 @@ class HomeScreen extends StatelessWidget {
                     gradient: AppColors.premiumGradient,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      const Icon(Icons.workspace_premium,
+                      Icon(Icons.workspace_premium,
                           color: Colors.black, size: 32),
-                      const SizedBox(width: 14),
-                      const Expanded(
+                      SizedBox(width: 14),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -253,7 +252,7 @@ class HomeScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward, color: Colors.black),
+                      Icon(Icons.arrow_forward, color: Colors.black),
                     ],
                   ),
                 ),
