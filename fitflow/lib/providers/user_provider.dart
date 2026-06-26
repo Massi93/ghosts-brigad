@@ -1,0 +1,102 @@
+import 'package:flutter/foundation.dart';
+
+import '../core/constants/app_constants.dart';
+import '../models/user_profile.dart';
+import '../services/auth_service.dart';
+import '../services/storage_service.dart';
+import '../services/subscription_service.dart';
+
+/// Owns authentication, the user profile and subscription entitlement.
+class UserProvider extends ChangeNotifier {
+  UserProvider(this._auth, this._subs, this._storage) {
+    _profile = _auth.currentUser();
+    _onboardingDone = _storage.readBool(AppConstants.kOnboardingDone);
+  }
+
+  final AuthService _auth;
+  final SubscriptionService _subs;
+  final StorageService _storage;
+
+  UserProfile? _profile;
+  bool _loading = false;
+  bool _onboardingDone = false;
+
+  UserProfile? get profile => _profile;
+  bool get isAuthenticated => _profile != null;
+  bool get isLoading => _loading;
+  bool get isPremium => _subs.isPremium;
+  bool get onboardingComplete => _onboardingDone;
+
+  Future<void> signUp({
+    required String name,
+    required String email,
+    required String password,
+  }) async {
+    _setLoading(true);
+    _profile = await _auth.signUp(name: name, email: email, password: password);
+    _setLoading(false);
+  }
+
+  Future<void> signIn({required String email, required String password}) async {
+    _setLoading(true);
+    _profile = await _auth.signIn(email: email, password: password);
+    _setLoading(false);
+  }
+
+  Future<void> signInWithProvider(String provider) async {
+    _setLoading(true);
+    _profile = await _auth.signInWithProvider(provider);
+    _setLoading(false);
+  }
+
+  Future<void> completeOnboarding({
+    required int age,
+    required double heightCm,
+    required double weightKg,
+    required FitnessLevel level,
+    required Goal goal,
+  }) async {
+    if (_profile == null) return;
+    _profile = _profile!.copyWith(
+      age: age,
+      heightCm: heightCm,
+      weightKg: weightKg,
+      level: level,
+      goal: goal,
+    );
+    await _auth.updateProfile(_profile!);
+    _onboardingDone = true;
+    await _storage.writeBool(AppConstants.kOnboardingDone, true);
+    notifyListeners();
+  }
+
+  Future<void> updateProfile(UserProfile updated) async {
+    _profile = updated;
+    await _auth.updateProfile(updated);
+    notifyListeners();
+  }
+
+  Future<bool> upgradeToPremium() async {
+    final ok = await _subs.purchasePremium();
+    notifyListeners();
+    return ok;
+  }
+
+  Future<void> cancelPremium() async {
+    await _subs.cancel();
+    notifyListeners();
+  }
+
+  Future<void> signOut() async {
+    await _auth.signOut();
+    await _storage.writeBool(AppConstants.kOnboardingDone, false);
+    _profile = null;
+    _onboardingDone = false;
+    notifyListeners();
+  }
+
+  void _setLoading(bool v) {
+    _loading = v;
+    notifyListeners();
+  }
+}
