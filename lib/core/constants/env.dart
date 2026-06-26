@@ -30,6 +30,12 @@ class Env {
   static const String revenueCatKey =
       String.fromEnvironment('REVENUECAT_KEY', defaultValue: '');
 
+  /// Use Firebase (Auth + Firestore) as the backend instead of local-only.
+  /// Requires `flutterfire configure` to have generated firebase_options.dart.
+  /// Build with: `--dart-define=USE_FIREBASE=true`.
+  static const bool useFirebase =
+      bool.fromEnvironment('USE_FIREBASE', defaultValue: false);
+
   static bool get hasOpenAi => openAiApiKey.isNotEmpty;
   static bool get hasBackend => apiBaseUrl.isNotEmpty;
   static bool get hasRevenueCat => revenueCatKey.isNotEmpty;
