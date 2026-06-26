@@ -12,6 +12,11 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.6
 
+  # Backend — Firebase (optional, enabled via --dart-define=USE_FIREBASE=true)
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
   # State management
   provider: ^6.1.2
 
