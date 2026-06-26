@@ -17,7 +17,10 @@ class ExerciseDetailScreen extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
-            child: ExerciseVideoPlayer(url: exercise.videoUrl),
+            child: ExerciseVideoPlayer(
+              url: exercise.videoUrl,
+              thumbnailUrl: exercise.thumbnailUrl,
+            ),
           ),
           Padding(
             padding: const EdgeInsets.all(20),

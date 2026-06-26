@@ -1,13 +1,22 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import '../theme/app_colors.dart';
 
-/// Reusable network video player (Chewie) for exercise/program videos.
+/// Plays the exercise instructional video, or shows an elegant "Coming soon"
+/// hero if no real video is available yet ([url] empty). The hero uses the
+/// thumbnail as a backdrop so the screen still feels rich.
 class ExerciseVideoPlayer extends StatefulWidget {
-  const ExerciseVideoPlayer({super.key, required this.url, this.autoplay = false});
+  const ExerciseVideoPlayer({
+    super.key,
+    required this.url,
+    this.thumbnailUrl,
+    this.autoplay = false,
+  });
   final String url;
+  final String? thumbnailUrl;
   final bool autoplay;
 
   @override
@@ -19,10 +28,12 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
   ChewieController? _chewie;
   bool _error = false;
 
+  bool get _hasUrl => widget.url.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
-    _init();
+    if (_hasUrl) _init();
   }
 
   Future<void> _init() async {
@@ -60,24 +71,9 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_error) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: Container(
-          color: AppColors.surfaceAlt,
-          child: const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.videocam_off, color: AppColors.textMuted, size: 36),
-                SizedBox(height: 8),
-                Text('Vidéo indisponible',
-                    style: TextStyle(color: AppColors.textSecondary)),
-              ],
-            ),
-          ),
-        ),
-      );
+    // No URL configured → show the elegant "coming soon" hero.
+    if (!_hasUrl || _error) {
+      return _ComingSoonHero(thumbnailUrl: widget.thumbnailUrl);
     }
     if (_chewie == null) {
       return const AspectRatio(
@@ -91,6 +87,92 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
     return AspectRatio(
       aspectRatio: _video!.value.aspectRatio,
       child: Chewie(controller: _chewie!),
+    );
+  }
+}
+
+/// Elegant placeholder shown when the exercise has no real video yet.
+/// Uses the thumbnail as a dimmed backdrop + a centred badge.
+class _ComingSoonHero extends StatelessWidget {
+  const _ComingSoonHero({this.thumbnailUrl});
+  final String? thumbnailUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl: thumbnailUrl!,
+              fit: BoxFit.cover,
+              errorWidget: (_, __, ___) =>
+                  Container(color: AppColors.surfaceAlt),
+            )
+          else
+            Container(color: AppColors.surfaceAlt),
+
+          // Dark gradient overlay so the badge stays legible.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x66000000), Color(0xAA000000)],
+              ),
+            ),
+          ),
+
+          // Centred badge.
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.4),
+                        blurRadius: 20,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.play_arrow_rounded,
+                      color: Colors.black, size: 38),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Vidéo bientôt disponible',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    'Suis les instructions détaillées ci-dessous pour exécuter l\'exercice correctement.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
