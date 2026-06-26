@@ -92,15 +92,32 @@ service cloud.firestore {
 
 ## 7. Login social Google / Apple
 
-Le bouton social utilise pour l'instant l'**auth anonyme** Firebase comme
-fallback fonctionnel. Pour du vrai Google/Apple :
+✅ **Le code est implémenté** dans `FirebaseAuthService.signInWithProvider`
+(`google_sign_in` + `sign_in_with_apple` → `signInWithCredential`). Il reste à
+faire la **configuration côté comptes** (que seul le propriétaire du projet peut
+faire) :
 
-```bash
-flutter pub add google_sign_in sign_in_with_apple
-```
+### Google Sign-In
+1. Console Firebase → Authentication → Sign-in method → active **Google**.
+2. **Android** : ajoute l'empreinte **SHA-1** (et SHA-256) de ta clé de
+   signing dans les paramètres du projet Firebase, puis re-télécharge
+   `google-services.json` (`flutterfire configure` le refait).
+   ```bash
+   keytool -list -v -keystore ~/fitflow-upload.jks -alias upload   # SHA-1
+   ```
+3. **iOS** : ajoute le `REVERSED_CLIENT_ID` (depuis `GoogleService-Info.plist`)
+   comme URL scheme dans `ios/Runner/Info.plist`.
 
-Puis, dans `FirebaseAuthService.signInWithProvider`, échange le `signInAnonymously`
-contre un `signInWithCredential` (GoogleAuthProvider / OAuthProvider 'apple.com').
+### Sign in with Apple
+1. Console Firebase → Authentication → active **Apple**.
+2. **Apple Developer** : active la capability **Sign in with Apple** sur l'App
+   ID, crée un **Service ID** + une **Key** (pour le flux web/Android), et
+   renseigne-les dans la config Apple de Firebase.
+3. **Xcode** : ajoute la capability *Sign in with Apple* à la target Runner.
+
+Sans ces étapes, les boutons existent mais l'authentification échouera côté
+natif. En mode local (sans `USE_FIREBASE`), les boutons créent une session de
+démo.
 
 ## 8. Coach IA & paiements côté serveur (recommandé)
 
