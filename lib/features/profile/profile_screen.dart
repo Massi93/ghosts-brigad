@@ -88,6 +88,8 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          if (profile.phone != null && profile.phone!.isNotEmpty)
+            _infoTile(Icons.phone, 'Téléphone', profile.phone!),
           _infoTile(Icons.flag, 'Objectif', profile.goal.label),
           _infoTile(Icons.bar_chart, 'Niveau', profile.level.label),
           _infoTile(Icons.local_fire_department, 'Besoin calorique',
