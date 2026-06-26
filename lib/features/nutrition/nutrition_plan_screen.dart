@@ -48,11 +48,11 @@ class NutritionPlanScreen extends StatelessWidget {
           const SizedBox(height: 24),
           ...current.meals.map((m) => _MealCard(
                 meal: m,
-                logged: nutrition.isLogged(m.id),
+                logged: nutrition.isLoggedToday(m.id),
                 onToggle: () async {
                   final game = context.read<GamificationProvider>();
                   await nutrition.toggleMealLogged(m.id);
-                  if (nutrition.isLogged(m.id)) {
+                  if (nutrition.isLoggedToday(m.id)) {
                     await game.addPoints(AppConstants.pointsPerMealLogged);
                     await game.progressChallenge('ch_hydration', 1);
                   }
