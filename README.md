@@ -103,6 +103,7 @@ lib/
 - [`docs/SETUP.md`](docs/SETUP.md) — configuration des clés API, backend, contenu vidéo, auth, paiements.
 - [`docs/FIREBASE.md`](docs/FIREBASE.md) — activer le backend Firebase (Auth + Firestore) en `--dart-define=USE_FIREBASE=true`.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — publication App Store & Play Store, assets, signing.
+- [`deploy/`](deploy/) — branding (icône/splash déjà prêts), templates de signing Android, build de release.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture, choix techniques, comment brancher un backend.
 
 ## ⚠️ Avertissement

@@ -19,33 +19,21 @@ Guide de publication de FitFlow. Suppose que la configuration de
 
 ## 1. Assets
 
-### Icône d'application
+> ✅ **Déjà prêt.** L'icône et le splash sont fournis dans
+> `assets/branding/` et **pré-configurés** dans `pubspec.yaml`. Il suffit de
+> générer les déclinaisons natives (après `flutter create .`) :
+
+### Icône & splash (pré-configurés)
 
 ```bash
-flutter pub add --dev flutter_launcher_icons
+flutter pub get
+dart run flutter_launcher_icons          # icônes Android/iOS/web
+dart run flutter_native_splash:create    # splash Android/iOS
 ```
 
-`pubspec.yaml` :
-
-```yaml
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/branding/icon_1024.png"   # 1024×1024, sans transparence iOS
-  adaptive_icon_background: "#0E1116"
-  adaptive_icon_foreground: "assets/branding/icon_foreground.png"
-```
-
-```bash
-dart run flutter_launcher_icons
-```
-
-### Splash screen
-
-```bash
-flutter pub add --dev flutter_native_splash
-dart run flutter_native_splash:create
-```
+Pour personnaliser le logo : remplace les PNG d'`assets/branding/` (ou relance
+`python3 scripts/generate_branding.py` après `pip install Pillow`), puis
+ré-exécute les deux commandes ci-dessus. Détails : `deploy/README.md`.
 
 ### Captures d'écran (store listing)
 
@@ -121,17 +109,20 @@ SDK choisi : RevenueCat, google_sign_in, sign_in_with_apple.)
 
 ---
 
-## 5. CI/CD (optionnel)
+## 5. CI/CD (déjà en place)
 
-Pipeline type (GitHub Actions / Codemagic) :
+Deux workflows GitHub Actions sont fournis (`.github/workflows/`) :
 
-1. `flutter pub get`
-2. `flutter analyze && flutter test`
-3. `flutter build appbundle/ipa --dart-define-from-file=...`
-4. Upload : `fastlane supply` (Play) / `fastlane deliver` (App Store).
+| Workflow | Déclencheur | Rôle |
+|---|---|---|
+| `fitflow-ci.yml` | push / PR sur `fitflow/**` | `flutter analyze` + `flutter test` |
+| `fitflow-release.yml` | tag `v*` ou *Run workflow* | régénère le natif, génère icône+splash, build **APK + AAB**, publie les artefacts |
 
-Stocke les secrets (keystore, clés, defines) dans les **secrets du CI**, jamais
-dans le dépôt.
+Sans secret, le build de release utilise la signature *debug* (build valide pour
+vérification). Pour des binaires **signés**, ajoute le keystore via les *secrets*
+du dépôt, décode-le dans le job, et complète avec
+`fastlane supply` (Play) / `fastlane deliver` (App Store). Stocke clés et
+defines dans les *secrets* du CI, jamais dans le dépôt.
 
 ---
 
