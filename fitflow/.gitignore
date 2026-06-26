@@ -1,0 +1,36 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Generated platform folders (regenerate with `flutter create .`)
+# Remove these lines if you commit native folders with custom config.
+android/
+ios/
+web/
+macos/
+linux/
+windows/
+
+# Secrets — never commit real keys (use --dart-define, see docs/SETUP.md)
+.env
+*.keystore
+key.properties
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+
+# Misc
+.DS_Store
+*.log
