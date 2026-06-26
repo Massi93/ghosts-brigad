@@ -47,6 +47,10 @@ dependencies:
   uuid: ^4.4.0
   percent_indicator: ^4.2.3
 
+  # GDPR: data export + opening privacy policy URL
+  share_plus: ^10.0.2
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

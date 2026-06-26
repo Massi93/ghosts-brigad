@@ -11,6 +11,7 @@ class UserProvider extends ChangeNotifier {
   UserProvider(this._auth, this._subs, this._storage) {
     _profile = _auth.currentUser();
     _onboardingDone = _storage.readBool(AppConstants.kOnboardingDone);
+    _privacyAccepted = _storage.readBool(AppConstants.kPrivacyAccepted);
   }
 
   final AuthService _auth;
@@ -20,12 +21,22 @@ class UserProvider extends ChangeNotifier {
   UserProfile? _profile;
   bool _loading = false;
   bool _onboardingDone = false;
+  bool _privacyAccepted = false;
 
   UserProfile? get profile => _profile;
   bool get isAuthenticated => _profile != null;
   bool get isLoading => _loading;
   bool get isPremium => _subs.isPremium;
   bool get onboardingComplete => _onboardingDone;
+  bool get privacyAccepted => _privacyAccepted;
+
+  Future<void> acceptPrivacy() async {
+    _privacyAccepted = true;
+    await _storage.writeBool(AppConstants.kPrivacyAccepted, true);
+    await _storage.writeJson(AppConstants.kPrivacyAcceptedAt,
+        {'at': DateTime.now().toIso8601String()});
+    notifyListeners();
+  }
 
   Future<void> signUp({
     required String name,
@@ -102,6 +113,40 @@ class UserProvider extends ChangeNotifier {
     _profile = null;
     _onboardingDone = false;
     notifyListeners();
+  }
+
+  /// GDPR "Right to be forgotten": delete the auth account + all user-scoped
+  /// data (profile, progress, completed workouts, meals, gamification, coach
+  /// history, subscription, settings). Returns true on success.
+  Future<bool> deleteAccount() async {
+    _setLoading(true);
+    try {
+      await _auth.deleteAccount();
+      // Wipe every local key we own.
+      for (final key in const [
+        AppConstants.kUserProfile,
+        AppConstants.kProgressEntries,
+        AppConstants.kCompletedWorkouts,
+        AppConstants.kLoggedMeals,
+        AppConstants.kGamification,
+        AppConstants.kSubscription,
+        AppConstants.kOnboardingDone,
+        AppConstants.kCoachHistory,
+        AppConstants.kSettings,
+        AppConstants.kPrivacyAccepted,
+        AppConstants.kPrivacyAcceptedAt,
+      ]) {
+        await _storage.remove(key);
+      }
+      _profile = null;
+      _onboardingDone = false;
+      _privacyAccepted = false;
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   void _setLoading(bool v) {
