@@ -11,10 +11,23 @@ import '../../providers/gamification_provider.dart';
 import '../../providers/progress_provider.dart';
 import '../../providers/workout_provider.dart';
 import 'exercise_detail_screen.dart';
+import 'workout_session_screen.dart';
 
 class ProgramDetailScreen extends StatelessWidget {
   const ProgramDetailScreen({super.key, required this.program});
   final WorkoutProgram program;
+
+  /// Launch the guided session; award rewards only if it was completed.
+  Future<void> _startSession(BuildContext context) async {
+    final completed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkoutSessionScreen(program: program),
+      ),
+    );
+    if (!context.mounted || completed != true) return;
+    await _finish(context);
+  }
 
   Future<void> _finish(BuildContext context) async {
     // Capture everything that depends on `context` BEFORE awaiting, so we never
@@ -124,9 +137,9 @@ class ProgramDetailScreen extends StatelessWidget {
                     _ExerciseTile(index: e.key + 1, exercise: e.value)),
                 const SizedBox(height: 24),
                 GradientButton(
-                  label: 'Démarrer & terminer la séance',
+                  label: 'Démarrer la séance guidée',
                   icon: Icons.play_arrow,
-                  onPressed: () => _finish(context),
+                  onPressed: () => _startSession(context),
                 ),
                 const SizedBox(height: 12),
                 const Center(
