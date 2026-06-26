@@ -15,6 +15,7 @@ import 'providers/workout_provider.dart';
 import 'services/ai_coach_service.dart';
 import 'services/auth_service.dart';
 import 'services/content_service.dart';
+import 'services/signup_relay_service.dart';
 import 'services/storage_service.dart';
 import 'services/subscription_service.dart';
 import 'services/firebase/firebase_bootstrap.dart';
@@ -73,6 +74,7 @@ class FitFlowApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<StorageService>.value(value: storage),
+        Provider<SignupRelayService>(create: (_) => SignupRelayService()),
         ChangeNotifierProvider(
             create: (_) => UserProvider(auth, subs, storage)),
         ChangeNotifierProvider(

@@ -42,6 +42,15 @@ class Env {
   static const bool demoPremium =
       bool.fromEnvironment('DEMO_PREMIUM', defaultValue: false);
 
+  /// Google Apps Script webhook URL that mirrors new signups into a Sheet
+  /// (test-phase admin view — no Firebase needed). Set with:
+  /// `--dart-define=SIGNUP_WEBHOOK_URL=https://script.google.com/macros/s/.../exec`.
+  /// Disabled when empty; the call is best-effort and never blocks signup.
+  static const String signupWebhookUrl =
+      String.fromEnvironment('SIGNUP_WEBHOOK_URL', defaultValue: '');
+
+  static bool get hasSignupWebhook => signupWebhookUrl.isNotEmpty;
+
   static bool get hasOpenAi => openAiApiKey.isNotEmpty;
   static bool get hasBackend => apiBaseUrl.isNotEmpty;
   static bool get hasRevenueCat => revenueCatKey.isNotEmpty;
