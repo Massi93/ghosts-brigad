@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'core/constants/app_constants.dart';
+import 'core/constants/env.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/coach_provider.dart';
 import 'providers/gamification_provider.dart';
@@ -16,6 +17,8 @@ import 'services/auth_service.dart';
 import 'services/content_service.dart';
 import 'services/storage_service.dart';
 import 'services/subscription_service.dart';
+import 'services/firebase/firebase_bootstrap.dart';
+import 'services/firebase/firebase_auth_service.dart';
 import 'features/auth/auth_gate.dart';
 
 Future<void> main() async {
@@ -25,9 +28,20 @@ Future<void> main() async {
   // Bootstrap the local persistence + service layer.
   final storage = await StorageService.init();
   final content = ContentService();
-  final auth = AuthService(storage);
   final subs = SubscriptionService(storage);
   final coach = AiCoachService();
+
+  // Pick the auth backend. Firebase (real auth + Firestore profile sync) when
+  // built with --dart-define=USE_FIREBASE=true; otherwise local/offline.
+  final AuthService auth;
+  if (Env.useFirebase) {
+    await FirebaseBootstrap.ensureInitialised();
+    final firebaseAuth = FirebaseAuthService();
+    await firebaseAuth.restoreSession();
+    auth = firebaseAuth;
+  } else {
+    auth = LocalAuthService(storage);
+  }
 
   runApp(FitFlowApp(
     storage: storage,
