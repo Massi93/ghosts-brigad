@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fitflow/core/constants/app_constants.dart';
 import 'package:fitflow/core/constants/env.dart';
+import 'package:fitflow/core/constants/app_constants.dart';
 import 'package:fitflow/models/user_profile.dart';
 import 'package:fitflow/services/signup_relay_service.dart';
 
