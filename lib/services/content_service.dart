@@ -1,3 +1,4 @@
+import '../core/constants/app_constants.dart';
 import '../core/constants/env.dart';
 import '../models/exercise.dart';
 import '../models/nutrition_plan.dart';
