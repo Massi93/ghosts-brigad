@@ -38,17 +38,34 @@ class FirebaseAuthService implements AuthService {
   @override
   UserProfile? currentUser() => _cached;
 
-  Future<UserProfile> _loadOrCreateProfile(User user) async {
+  Future<UserProfile> _loadOrCreateProfile(
+    User user, {
+    String? firstNameHint,
+    String? lastNameHint,
+  }) async {
     final snap = await _doc(user.uid).get();
     final data = snap.data();
     if (snap.exists && data != null) {
       return UserProfile.fromJson({...data, 'id': user.uid});
     }
+    // First sign-in: pre-fill what the provider gave us, mark details as
+    // incomplete so the auth gate routes through the "additional info" form.
+    final parts = (user.displayName ?? '').trim().split(RegExp(r'\s+'));
+    final first = firstNameHint ??
+        (parts.isNotEmpty && parts.first.isNotEmpty ? parts.first : null);
+    final last = lastNameHint ??
+        (parts.length > 1 ? parts.sublist(1).join(' ') : null);
+    final display = (user.displayName?.trim().isNotEmpty ?? false)
+        ? user.displayName!.trim()
+        : (user.email?.split('@').first ?? 'Athlète');
     final profile = UserProfile(
       id: user.uid,
-      name: user.displayName ?? (user.email?.split('@').first ?? 'Athlète'),
+      name: display,
       email: user.email ?? '',
       createdAt: DateTime.now(),
+      firstName: first,
+      lastName: last,
+      detailsComplete: false,
     );
     await _doc(user.uid).set(profile.toJson());
     return profile;
@@ -95,6 +112,8 @@ class FirebaseAuthService implements AuthService {
   /// (OAuth client, SHA-1, Apple capability) — see docs/FIREBASE.md §7.
   @override
   Future<UserProfile?> signInWithProvider(String provider) async {
+    String? firstHint;
+    String? lastHint;
     final UserCredential cred;
     switch (provider) {
       case 'google':
@@ -103,14 +122,20 @@ class FirebaseAuthService implements AuthService {
         cred = await _auth.signInWithCredential(credential);
         break;
       case 'apple':
-        final credential = await _appleCredential();
-        if (credential == null) return null; // cancelled
-        cred = await _auth.signInWithCredential(credential);
+        final result = await _appleSignIn();
+        if (result == null) return null; // cancelled
+        cred = await _auth.signInWithCredential(result.$1);
+        firstHint = result.$2;
+        lastHint = result.$3;
         break;
       default:
         return null;
     }
-    _cached = await _loadOrCreateProfile(cred.user!);
+    _cached = await _loadOrCreateProfile(
+      cred.user!,
+      firstNameHint: firstHint,
+      lastNameHint: lastHint,
+    );
     return _cached;
   }
 
@@ -124,7 +149,9 @@ class FirebaseAuthService implements AuthService {
     );
   }
 
-  Future<AuthCredential?> _appleCredential() async {
+  /// Returns (credential, firstName?, lastName?). Apple only returns the name
+  /// on the FIRST sign-in, so we surface it to the caller for storage.
+  Future<(AuthCredential, String?, String?)?> _appleSignIn() async {
     try {
       final apple = await SignInWithApple.getAppleIDCredential(
         scopes: const [
@@ -132,10 +159,11 @@ class FirebaseAuthService implements AuthService {
           AppleIDAuthorizationScopes.fullName,
         ],
       );
-      return OAuthProvider('apple.com').credential(
+      final credential = OAuthProvider('apple.com').credential(
         idToken: apple.identityToken,
         accessToken: apple.authorizationCode,
       );
+      return (credential, apple.givenName, apple.familyName);
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) return null;
       rethrow;

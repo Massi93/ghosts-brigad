@@ -132,15 +132,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   _SocialButton(
                     icon: Icons.g_mobiledata,
                     label: 'Continuer avec Google',
-                    onTap: () =>
-                        context.read<UserProvider>().signInWithProvider('google'),
+                    onTap: () async {
+                      await context
+                          .read<UserProvider>()
+                          .signInWithProvider('google');
+                    },
                   ),
                   const SizedBox(height: 12),
                   _SocialButton(
                     icon: Icons.apple,
                     label: 'Continuer avec Apple',
-                    onTap: () =>
-                        context.read<UserProvider>().signInWithProvider('apple'),
+                    onTap: () async {
+                      await context
+                          .read<UserProvider>()
+                          .signInWithProvider('apple');
+                    },
                   ),
                   const SizedBox(height: 24),
                   Center(
