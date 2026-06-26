@@ -78,7 +78,12 @@ jobs:
       - name: Build APK (release, debug-signed, full-access test build)
         # DEMO_PREMIUM unlocks all Premium features so the app can be fully
         # tested with no payment. Remove this flag for real store builds.
-        run: flutter build apk --release --dart-define=DEMO_PREMIUM=true
+        # SIGNUP_WEBHOOK_URL mirrors new signups to a Google Sheet (test-phase
+        # admin dashboard, see SignupRelayService).
+        run: |
+          flutter build apk --release \
+            --dart-define=DEMO_PREMIUM=true \
+            --dart-define=SIGNUP_WEBHOOK_URL=https://script.google.com/macros/s/AKfycbwIX2ZK10bFDmswavtN0eoHAZkMzxgnMmi2GKzk2yoNoRmh_CvsTU2g9hmtw2nJDtRp/exec
 
       - name: Stage APK
         run: |
