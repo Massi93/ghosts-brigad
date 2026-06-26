@@ -5,6 +5,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../providers/user_provider.dart';
+import '../../services/signup_relay_service.dart';
 
 /// Multi-step onboarding that captures the data the AI coach needs.
 class OnboardingScreen extends StatefulWidget {
@@ -24,21 +25,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   double _height = 175;
   double _weight = 72;
 
-  void _next() {
+  Future<void> _next() async {
     if (_page < 2) {
       _controller.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
-    } else {
-      context.read<UserProvider>().completeOnboarding(
-            age: _age.round(),
-            heightCm: _height,
-            weightKg: _weight,
-            level: _level,
-            goal: _goal,
-          );
+      return;
     }
+    final user = context.read<UserProvider>();
+    final relay = context.read<SignupRelayService>();
+    await user.completeOnboarding(
+      age: _age.round(),
+      heightCm: _height,
+      weightKg: _weight,
+      level: _level,
+      goal: _goal,
+    );
+    // Now that the full profile is known, push the new signup to the Sheet.
+    final p = user.profile;
+    if (p != null) await relay.notifySignup(p);
   }
 
   @override

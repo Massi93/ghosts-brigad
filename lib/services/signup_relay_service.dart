@@ -13,7 +13,7 @@ import '../models/user_profile.dart';
 /// blocked by a slow / unreachable Sheet. Disabled entirely when
 /// [Env.signupWebhookUrl] is empty.
 class SignupRelayService {
-  /// Sends prénom/nom/âge/téléphone/email/provider/uid to the Sheet.
+  /// Sends civil status + fitness profile to the Sheet.
   /// [provider] is one of 'email', 'google', 'apple', 'demo'.
   Future<void> notifySignup(UserProfile profile, {String provider = 'email'}) async {
     if (!Env.hasSignupWebhook) return;
@@ -30,6 +30,10 @@ class SignupRelayService {
               'age': profile.age,
               'phone': profile.phone ?? '',
               'provider': provider,
+              'level': profile.level.label,
+              'goal': profile.goal.label,
+              'weightKg': profile.weightKg,
+              'heightCm': profile.heightCm,
             }),
           )
           .timeout(const Duration(seconds: 5));
