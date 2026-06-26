@@ -104,11 +104,17 @@ contre un `signInWithCredential` (GoogleAuthProvider / OAuthProvider 'apple.com'
 
 ## 8. Coach IA & paiements côté serveur (recommandé)
 
-- **Proxy OpenAI** : crée une **Cloud Function** `coach` qui appelle OpenAI avec
-  la clé gardée côté serveur, et fais pointer `AiCoachService` dessus
-  (`API_BASE_URL`). Évite d'exposer la clé dans le binaire.
-- **RevenueCat** : configure un **webhook** → Cloud Function qui met à jour
-  l'entitlement Premium dans `users/{uid}`.
+Les **Cloud Functions sont déjà fournies** dans [`../functions/`](../functions/) :
+
+- **`coach`** : proxy OpenAI (clé gardée côté serveur). Lance l'app avec
+  `--dart-define=API_BASE_URL=https://<region>-<projet>.cloudfunctions.net` et
+  `AiCoachService` l'utilise automatiquement à la place d'OpenAI direct.
+- **`revenuecatWebhook`** : met à jour `users/{uid}.premium` à partir des
+  événements RevenueCat.
+
+Déploiement : voir [`../functions/README.md`](../functions/README.md)
+(`firebase functions:secrets:set OPENAI_API_KEY` puis
+`firebase deploy --only functions`).
 
 ---
 
