@@ -29,6 +29,12 @@ class AppConstants {
   static const String kSubscription = 'fitflow_subscription';
   static const String kOnboardingDone = 'fitflow_onboarding_done';
   static const String kCoachHistory = 'fitflow_coach_history';
+  static const String kSettings = 'fitflow_settings';
+
+  // Workout session settings bounds
+  static const int minRestSeconds = 5;
+  static const int maxRestSeconds = 120;
+  static const int defaultRestSeconds = 20;
 }
 
 /// User fitness levels used to tailor coach advice & program difficulty.
