@@ -1,7 +1,27 @@
 import '../core/constants/app_constants.dart';
 import '../models/nutrition_plan.dart';
 
-String _food(String q) => 'https://source.unsplash.com/featured/300x200/?$q,food';
+/// Curated set of stable Unsplash food photo URLs (specific photo IDs that
+/// don't depend on the deprecated source.unsplash.com random API). Each meal
+/// is mapped to a thematically-relevant photo. The errorWidget in
+/// CachedNetworkImage gracefully falls back to a fork/knife icon if a
+/// specific URL ever 404s.
+String _img(String id) =>
+    'https://images.unsplash.com/photo-$id?w=600&q=80&auto=format&fit=crop';
+
+// Oatmeal, eggs, salmon… curated photo IDs from public Unsplash collections.
+const _oatmeal = '1517673400267-0251440c45dc';
+const _chicken = '1604909052743-94e838986d24';
+const _yogurt = '1488477181946-6428a0291777';
+const _salmon = '1467003909585-2f8a72700288';
+const _omelette = '1525351484163-7529414344d8';
+const _salad = '1512621776951-a57141f2eefd';
+const _shake = '1622597479711-26c9a3a8ec45';
+const _turkey = '1574484284002-952d92456975';
+const _avocado = '1525351484163-7529414344d8';
+const _pasta = '1551892374-ecf8754cf8b0';
+const _peanut = '1568822617270-2c1579f8dfe2';
+const _potato = '1604908176997-125f25cc6f3d';
 
 final List<NutritionPlan> kNutritionPlans = [
   NutritionPlan(
@@ -22,7 +42,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 62,
         fatG: 12,
         ingredients: const ['60g flocons d\'avoine', '1 banane', '15g amandes', '200ml lait'],
-        imageUrl: _food('oatmeal'),
+        imageUrl: _img(_oatmeal),
       ),
       Meal(
         id: 'm2',
@@ -33,7 +53,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 65,
         fatG: 14,
         ingredients: const ['150g poulet', '80g riz complet', '200g brocoli'],
-        imageUrl: _food('chicken-rice'),
+        imageUrl: _img(_chicken),
       ),
       Meal(
         id: 'm3',
@@ -44,7 +64,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 22,
         fatG: 6,
         ingredients: const ['200g yaourt grec', '100g fruits rouges'],
-        imageUrl: _food('yogurt'),
+        imageUrl: _img(_yogurt),
       ),
       Meal(
         id: 'm4',
@@ -55,7 +75,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 45,
         fatG: 22,
         ingredients: const ['150g saumon', '200g patate douce', '150g épinards'],
-        imageUrl: _food('salmon'),
+        imageUrl: _img(_salmon),
       ),
     ],
   ),
@@ -78,7 +98,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 8,
         fatG: 12,
         ingredients: const ['4 blancs + 1 œuf', 'épinards', 'tomates'],
-        imageUrl: _food('omelette'),
+        imageUrl: _img(_omelette),
       ),
       Meal(
         id: 'c2',
@@ -89,7 +109,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 40,
         fatG: 14,
         ingredients: const ['120g thon', '60g quinoa', 'crudités'],
-        imageUrl: _food('tuna-salad'),
+        imageUrl: _img(_salad),
       ),
       Meal(
         id: 'c3',
@@ -100,7 +120,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 20,
         fatG: 3,
         ingredients: const ['1 dose whey', '1 pomme'],
-        imageUrl: _food('protein-shake'),
+        imageUrl: _img(_shake),
       ),
       Meal(
         id: 'c4',
@@ -111,7 +131,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 22,
         fatG: 16,
         ingredients: const ['150g dinde', 'courgettes', 'chou-fleur'],
-        imageUrl: _food('turkey'),
+        imageUrl: _img(_turkey),
       ),
     ],
   ),
@@ -134,7 +154,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 50,
         fatG: 32,
         ingredients: const ['3 œufs', '1/2 avocat', '2 tranches pain complet'],
-        imageUrl: _food('eggs-avocado'),
+        imageUrl: _img(_avocado),
       ),
       Meal(
         id: 'b2',
@@ -145,7 +165,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 90,
         fatG: 24,
         ingredients: const ['180g bœuf', '120g pâtes', 'légumes'],
-        imageUrl: _food('beef-pasta'),
+        imageUrl: _img(_pasta),
       ),
       Meal(
         id: 'b3',
@@ -156,7 +176,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 55,
         fatG: 12,
         ingredients: const ['whey', 'avoine', 'beurre de cacahuète', 'lait'],
-        imageUrl: _food('peanut-butter'),
+        imageUrl: _img(_peanut),
       ),
       Meal(
         id: 'b4',
@@ -167,7 +187,7 @@ final List<NutritionPlan> kNutritionPlans = [
         carbsG: 60,
         fatG: 20,
         ingredients: const ['200g poulet', '250g pommes de terre', 'haricots verts'],
-        imageUrl: _food('chicken-potato'),
+        imageUrl: _img(_potato),
       ),
     ],
   ),
