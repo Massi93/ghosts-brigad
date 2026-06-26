@@ -105,6 +105,7 @@ lib/
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — publication App Store & Play Store, assets, signing.
 - [`deploy/`](deploy/) — branding (icône/splash déjà prêts), templates de signing Android, build de release.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — architecture, choix techniques, comment brancher un backend.
+- [`docs/legal/PRIVACY_POLICY.md`](docs/legal/PRIVACY_POLICY.md) & [`TERMS_OF_SERVICE.md`](docs/legal/TERMS_OF_SERVICE.md) — modèles RGPD à publier avant les stores.
 
 ## ⚠️ Avertissement
 

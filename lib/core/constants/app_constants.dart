@@ -30,6 +30,13 @@ class AppConstants {
   static const String kOnboardingDone = 'fitflow_onboarding_done';
   static const String kCoachHistory = 'fitflow_coach_history';
   static const String kSettings = 'fitflow_settings';
+  static const String kPrivacyAccepted = 'fitflow_privacy_accepted';
+  static const String kPrivacyAcceptedAt = 'fitflow_privacy_accepted_at';
+
+  // Public-facing legal documents (replace with your real hosted URLs).
+  static const String privacyPolicyUrl = 'https://fitflow.app/privacy';
+  static const String termsOfServiceUrl = 'https://fitflow.app/terms';
+  static const String supportEmail = 'support@fitflow.app';
 
   // Workout session settings bounds
   static const int minRestSeconds = 5;

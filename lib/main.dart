@@ -72,6 +72,7 @@ class FitFlowApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider<StorageService>.value(value: storage),
         ChangeNotifierProvider(
             create: (_) => UserProvider(auth, subs, storage)),
         ChangeNotifierProvider(

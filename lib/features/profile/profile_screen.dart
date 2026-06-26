@@ -6,6 +6,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/paywall_sheet.dart';
 import '../../providers/user_provider.dart';
+import '../../services/storage_service.dart';
+import 'privacy_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -113,6 +115,22 @@ class ProfileScreen extends StatelessWidget {
                 side: const BorderSide(color: AppColors.surfaceAlt),
               ),
             ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    PrivacyScreen(storage: context.read<StorageService>()),
+              ),
+            ),
+            icon: const Icon(Icons.privacy_tip_outlined),
+            label: const Text('Confidentialité & mes données'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: const BorderSide(color: AppColors.surfaceAlt),
+            ),
+          ),
           const SizedBox(height: 12),
           TextButton.icon(
             onPressed: () => _confirmSignOut(context, user),

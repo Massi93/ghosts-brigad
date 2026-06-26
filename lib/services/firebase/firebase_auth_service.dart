@@ -181,4 +181,39 @@ class FirebaseAuthService implements AuthService {
     await _auth.signOut();
     _cached = null;
   }
+
+  /// GDPR "right to be forgotten": wipe all user-scoped Firestore data, then
+  /// delete the Firebase Auth user.
+  @override
+  Future<void> deleteAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+    await _deleteSubcollection('progress', uid);
+    await _doc(uid).delete();
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      // Firebase requires a recent sign-in to delete; surface this so the UI
+      // can ask the user to log in again before retrying.
+      if (e.code == 'requires-recent-login') {
+        await _auth.signOut();
+      }
+      rethrow;
+    }
+    _cached = null;
+  }
+
+  Future<void> _deleteSubcollection(String name, String uid) async {
+    final snap = await _db
+        .collection('users')
+        .doc(uid)
+        .collection(name)
+        .get();
+    final batch = _db.batch();
+    for (final d in snap.docs) {
+      batch.delete(d.reference);
+    }
+    if (snap.docs.isNotEmpty) await batch.commit();
+  }
 }
