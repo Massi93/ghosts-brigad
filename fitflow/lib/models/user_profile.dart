@@ -3,7 +3,7 @@ import '../core/constants/app_constants.dart';
 /// The authenticated user's fitness profile.
 class UserProfile {
   final String id;
-  final String name;
+  final String name;        // Display name = "Prénom Nom" (or fallback)
   final String email;
   final int age;
   final double heightCm;
@@ -12,6 +12,16 @@ class UserProfile {
   final Goal goal;
   final String? avatarUrl;
   final DateTime createdAt;
+
+  // New, optional civil-status fields collected at sign-up.
+  final String? firstName;
+  final String? lastName;
+  final String? phone;
+
+  /// True when civil info (firstName / phone) has been collected. Used by the
+  /// auth gate to route through the "additional info" screen after a Google /
+  /// Apple sign-in.
+  final bool detailsComplete;
 
   const UserProfile({
     required this.id,
@@ -24,6 +34,10 @@ class UserProfile {
     this.goal = Goal.getFit,
     this.avatarUrl,
     required this.createdAt,
+    this.firstName,
+    this.lastName,
+    this.phone,
+    this.detailsComplete = false,
   });
 
   /// Body Mass Index.
@@ -64,6 +78,10 @@ class UserProfile {
     FitnessLevel? level,
     Goal? goal,
     String? avatarUrl,
+    String? firstName,
+    String? lastName,
+    String? phone,
+    bool? detailsComplete,
   }) {
     return UserProfile(
       id: id,
@@ -76,6 +94,10 @@ class UserProfile {
       goal: goal ?? this.goal,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      phone: phone ?? this.phone,
+      detailsComplete: detailsComplete ?? this.detailsComplete,
     );
   }
 
@@ -90,6 +112,10 @@ class UserProfile {
         'goal': goal.index,
         'avatarUrl': avatarUrl,
         'createdAt': createdAt.toIso8601String(),
+        'firstName': firstName,
+        'lastName': lastName,
+        'phone': phone,
+        'detailsComplete': detailsComplete,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -101,6 +127,10 @@ class UserProfile {
         weightKg: (json['weightKg'] as num?)?.toDouble() ?? 70,
         level: FitnessLevel.values[(json['level'] as int?) ?? 0],
         goal: Goal.values[(json['goal'] as int?) ?? 2],
+        firstName: json['firstName'] as String?,
+        lastName: json['lastName'] as String?,
+        phone: json['phone'] as String?,
+        detailsComplete: (json['detailsComplete'] as bool?) ?? false,
         avatarUrl: json['avatarUrl'] as String?,
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
             DateTime.now(),

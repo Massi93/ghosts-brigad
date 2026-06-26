@@ -53,10 +53,13 @@ class LocalAuthService implements AuthService {
   }) async {
     // Simulate latency the way a network call would behave.
     await Future<void>.delayed(const Duration(milliseconds: 500));
+    // Email sign-up provides at least a first name → details still need the
+    // phone/age, so route through AdditionalInfoScreen (detailsComplete=false).
     final profile = UserProfile(
       id: _uuid.v4(),
       name: name.trim(),
       email: email.trim(),
+      firstName: name.trim(),
       createdAt: DateTime.now(),
     );
     await _storage.writeJson(AppConstants.kUserProfile, profile.toJson());
@@ -71,11 +74,11 @@ class LocalAuthService implements AuthService {
     await Future<void>.delayed(const Duration(milliseconds: 500));
     final existing = currentUser();
     if (existing != null && existing.email == email.trim()) return existing;
-    // Demo: create a session for any credentials (replace with real check).
     final profile = UserProfile(
       id: _uuid.v4(),
       name: email.split('@').first,
       email: email.trim(),
+      firstName: email.split('@').first,
       createdAt: DateTime.now(),
     );
     await _storage.writeJson(AppConstants.kUserProfile, profile.toJson());
@@ -84,11 +87,14 @@ class LocalAuthService implements AuthService {
 
   @override
   Future<UserProfile?> signInWithProvider(String provider) async {
+    // Demo Google/Apple flow: leave detailsComplete=false so the user goes
+    // through the AdditionalInfoScreen, mirroring the real Firebase flow.
     await Future<void>.delayed(const Duration(milliseconds: 500));
     final profile = UserProfile(
       id: _uuid.v4(),
       name: 'Athlète FitFlow',
-      email: 'user@$provider.com',
+      email: 'demo@$provider.fitflow',
+      firstName: provider == 'apple' ? 'Athlète' : null,
       createdAt: DateTime.now(),
     );
     await _storage.writeJson(AppConstants.kUserProfile, profile.toJson());
