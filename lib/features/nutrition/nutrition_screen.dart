@@ -8,6 +8,7 @@ import '../../core/widgets/paywall_sheet.dart';
 import '../../models/nutrition_plan.dart';
 import '../../providers/nutrition_provider.dart';
 import '../../providers/user_provider.dart';
+import 'add_meal_screen.dart';
 import 'daily_nutrition_tracker.dart';
 import 'nutrition_plan_screen.dart';
 
@@ -23,6 +24,16 @@ class NutritionScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrition')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddMealScreen()),
+        ),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.black,
+        icon: const Icon(Icons.add),
+        label: const Text('Repas'),
+      ),
       body: nutrition.isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(

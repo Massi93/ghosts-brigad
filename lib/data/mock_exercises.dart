@@ -16,6 +16,7 @@ String _thumb(String q) =>
     'https://source.unsplash.com/featured/400x300/?$q,fitness';
 
 final List<Exercise> kExercises = [
+  // ============== FREE TIER (no Premium required) ==============
   Exercise(
     id: 'ex_pushup',
     name: 'Pompes',
@@ -103,7 +104,8 @@ final List<Exercise> kExercises = [
     estimatedCalories: 35,
     tips: const ['Genou avant au-dessus de la cheville.'],
   ),
-  // ---- Premium-locked exercises (beyond the free 5) ----
+
+  // ============== PREMIUM EXERCISES ==============
   Exercise(
     id: 'ex_burpee',
     name: 'Burpees',
@@ -167,6 +169,7 @@ final List<Exercise> kExercises = [
     defaultReps: 10,
     estimatedCalories: 40,
     isPremium: true,
+    tips: const ['Garde les abdos gainés.', 'Pousse vers le haut, pas vers l\'avant.'],
   ),
   Exercise(
     id: 'ex_mountainclimber',
@@ -181,5 +184,185 @@ final List<Exercise> kExercises = [
     defaultReps: 30,
     estimatedCalories: 45,
     isPremium: true,
+    tips: const ['Genoux qui montent vers la poitrine, pas vers les coudes.'],
+  ),
+  // ---- NEW exercises ----
+  Exercise(
+    id: 'ex_dips',
+    name: 'Dips',
+    description:
+        'Ciblent les triceps et le bas des pectoraux. Se font sur barres '
+        'parallèles ou sur une chaise stable.',
+    muscleGroup: MuscleGroup.arms,
+    level: FitnessLevel.intermediate,
+    videoUrl: _sampleVideo,
+    thumbnailUrl: _thumb('dips'),
+    durationSeconds: 45,
+    defaultSets: 3,
+    defaultReps: 10,
+    estimatedCalories: 35,
+    isPremium: true,
+    tips: const ['Coudes serrés.', 'Descends jusqu\'à 90° au coude.'],
+  ),
+  Exercise(
+    id: 'ex_crunch',
+    name: 'Crunches',
+    description:
+        'Travail ciblé du grand droit (abdos). Mouvement court et contrôlé.',
+    muscleGroup: MuscleGroup.core,
+    level: FitnessLevel.beginner,
+    videoUrl: _sampleVideo2,
+    thumbnailUrl: _thumb('abs'),
+    durationSeconds: 40,
+    defaultSets: 3,
+    defaultReps: 20,
+    estimatedCalories: 20,
+    tips: const ['Ne tire pas sur ta nuque.', 'Souffle en remontant.'],
+  ),
+  Exercise(
+    id: 'ex_glutebridge',
+    name: 'Pont fessier',
+    description:
+        'Active fessiers et ischio-jambiers. Idéal en échauffement ou en '
+        'finisseur.',
+    muscleGroup: MuscleGroup.legs,
+    level: FitnessLevel.beginner,
+    videoUrl: _sampleVideo,
+    thumbnailUrl: _thumb('glutes'),
+    durationSeconds: 35,
+    defaultSets: 3,
+    defaultReps: 15,
+    estimatedCalories: 25,
+    tips: const ['Contracte les fessiers en haut.', 'Garde les abdos gainés.'],
+  ),
+  Exercise(
+    id: 'ex_highknees',
+    name: 'Montées de genoux',
+    description:
+        'Cardio intense, idéal en HIIT ou en échauffement dynamique.',
+    muscleGroup: MuscleGroup.cardio,
+    level: FitnessLevel.beginner,
+    videoUrl: _sampleVideo2,
+    thumbnailUrl: _thumb('running'),
+    durationSeconds: 45,
+    defaultSets: 3,
+    defaultReps: 40,
+    estimatedCalories: 50,
+    tips: const ['Genoux à hauteur des hanches.'],
+  ),
+  Exercise(
+    id: 'ex_russiantwist',
+    name: 'Russian Twists',
+    description:
+        'Travail des obliques. Assis, jambes décollées, fais pivoter le buste '
+        'de gauche à droite.',
+    muscleGroup: MuscleGroup.core,
+    level: FitnessLevel.intermediate,
+    videoUrl: _sampleVideo,
+    thumbnailUrl: _thumb('obliques'),
+    durationSeconds: 40,
+    defaultSets: 3,
+    defaultReps: 20,
+    estimatedCalories: 30,
+    isPremium: true,
+    tips: const ['Garde le dos droit.', 'Le mouvement vient des hanches.'],
+  ),
+  Exercise(
+    id: 'ex_bicepcurl',
+    name: 'Curl biceps',
+    description:
+        'Isolation des biceps avec haltères ou bouteilles d\'eau. Lent à la '
+        'descente pour maximiser le travail.',
+    muscleGroup: MuscleGroup.arms,
+    level: FitnessLevel.beginner,
+    videoUrl: _sampleVideo2,
+    thumbnailUrl: _thumb('biceps'),
+    durationSeconds: 40,
+    defaultSets: 3,
+    defaultReps: 12,
+    estimatedCalories: 25,
+    tips: const ['Coudes collés au corps.', 'Ne balance pas le buste.'],
+  ),
+  Exercise(
+    id: 'ex_tricepkickback',
+    name: 'Extension triceps',
+    description:
+        'Buste penché, extension complète du bras vers l\'arrière. Cible le '
+        'triceps en profondeur.',
+    muscleGroup: MuscleGroup.arms,
+    level: FitnessLevel.beginner,
+    videoUrl: _sampleVideo,
+    thumbnailUrl: _thumb('triceps'),
+    durationSeconds: 35,
+    defaultSets: 3,
+    defaultReps: 12,
+    estimatedCalories: 25,
+    tips: const ['Coude immobile, seul l\'avant-bras bouge.'],
+  ),
+  Exercise(
+    id: 'ex_jumprope',
+    name: 'Corde à sauter',
+    description:
+        'Cardio efficace pour le bas du corps et la coordination. Excellent '
+        'pour brûler des calories rapidement.',
+    muscleGroup: MuscleGroup.cardio,
+    level: FitnessLevel.intermediate,
+    videoUrl: _sampleVideo2,
+    thumbnailUrl: _thumb('jump-rope'),
+    durationSeconds: 60,
+    defaultSets: 4,
+    defaultReps: 60,
+    estimatedCalories: 70,
+    isPremium: true,
+    tips: const ['Saute juste assez haut pour passer la corde.'],
+  ),
+  Exercise(
+    id: 'ex_wallsit',
+    name: 'Chaise au mur',
+    description:
+        'Isométrique pour les cuisses. Dos contre le mur, genoux à 90°, '
+        'maintiens la position.',
+    muscleGroup: MuscleGroup.legs,
+    level: FitnessLevel.beginner,
+    videoUrl: _sampleVideo,
+    thumbnailUrl: _thumb('wall-sit'),
+    durationSeconds: 45,
+    defaultSets: 3,
+    defaultReps: 1,
+    estimatedCalories: 25,
+    tips: const ['Cuisses parallèles au sol.', 'Respire normalement.'],
+  ),
+  Exercise(
+    id: 'ex_bicyclecrunch',
+    name: 'Crunch vélo',
+    description:
+        'Variante dynamique du crunch qui sollicite les obliques en plus du '
+        'grand droit.',
+    muscleGroup: MuscleGroup.core,
+    level: FitnessLevel.intermediate,
+    videoUrl: _sampleVideo2,
+    thumbnailUrl: _thumb('core-workout'),
+    durationSeconds: 45,
+    defaultSets: 3,
+    defaultReps: 20,
+    estimatedCalories: 30,
+    isPremium: true,
+    tips: const ['Coude vers le genou opposé.'],
+  ),
+  Exercise(
+    id: 'ex_backextension',
+    name: 'Extension lombaire',
+    description:
+        'Renforce les lombaires et améliore la posture. Allongé sur le ventre, '
+        'soulève le buste.',
+    muscleGroup: MuscleGroup.back,
+    level: FitnessLevel.beginner,
+    videoUrl: _sampleVideo,
+    thumbnailUrl: _thumb('back'),
+    durationSeconds: 35,
+    defaultSets: 3,
+    defaultReps: 12,
+    estimatedCalories: 20,
+    tips: const ['Mouvement contrôlé.', 'Ne force pas en hyperextension.'],
   ),
 ];

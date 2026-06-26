@@ -166,7 +166,49 @@ Règles:
         "Programme pro : Push/Pull/Legs sur 6 jours avec deload toutes les 4 semaines. Module l'intensité via le RPE.",
       );
     }
-    return "Je suis Coach Flow ! 💬 Pose-moi une question sur ton entraînement, ta nutrition ou tes objectifs et je te donnerai un conseil adapté à ton niveau ${profile.level.label}. (Astuce : configure la clé OpenAI pour des réponses encore plus poussées.)";
+    if (m.contains('sommeil') ||
+        m.contains('dormir') ||
+        m.contains('fatigue') ||
+        m.contains('récup')) {
+      return "Le sommeil c'est 50% de la récup ! Vise 7-9h, couché à heure régulière, écran off 30 min avant. Si tu te sens cramé(e), une journée OFF est plus utile qu'une séance forcée. 😴";
+    }
+    if (m.contains('eau') ||
+        m.contains('hydra') ||
+        m.contains('boire')) {
+      final liters = (profile.weightKg * 0.035).toStringAsFixed(1);
+      return "Pour ton poids (${profile.weightKg.round()} kg), vise environ $liters L d'eau par jour. Bois régulièrement, pas tout d'un coup. Pendant la séance : 150-250 ml toutes les 15-20 min. 💧";
+    }
+    if (m.contains('cardio') ||
+        m.contains('courir') ||
+        m.contains('course') ||
+        m.contains('hiit')) {
+      return byLevel(
+        "Cardio débutant : 20-30 min de marche rapide ou vélo, 2-3x/semaine. Augmente progressivement. Garde une intensité où tu peux encore parler. 🚶",
+        "Mix steady-state (30-45 min @ 70% FCM) + HIIT (15-20 min de sprints) pour gagner en endurance ET brûler. 3-4 séances/semaine.",
+        "Périodise : phase aérobie longue + phase VMA (intervalles 30/30 à VMA). HIIT 2x/sem max pour ne pas saboter la force.",
+      );
+    }
+    if (m.contains('abdo') || m.contains('ventre') || m.contains('sangle')) {
+      return "Les abdos visibles, c'est 80% nutrition et 20% entraînement. Travaille la sangle 2-3x/semaine (planche, crunches, obliques) MAIS surtout réduis ton % de gras avec un léger déficit. Pas de magie ! 💪";
+    }
+    if (m.contains('motivation') ||
+        m.contains('découragé') ||
+        m.contains('arrêter') ||
+        m.contains('démotivé')) {
+      return "Hey, tout le monde passe par là ! 💚 Conseils : 1) Réduis la séance à 10 min, c'est mieux que rien. 2) Trouve TON pourquoi (énergie, confiance, santé…). 3) Le plus dur c'est de mettre les chaussures. Allez, on y va ! 🔥";
+    }
+    if (m.contains('combien') &&
+        (m.contains('séance') || m.contains('fois') || m.contains('semaine'))) {
+      return byLevel(
+        "Pour débuter : 3 séances/semaine suffisent largement. Mieux vaut 3 bonnes séances que 6 médiocres.",
+        "4-5 séances/semaine pour progresser solidement, avec au moins 1 jour OFF complet.",
+        "5-6 séances/semaine, avec gestion fine de la fatigue et deload toutes les 4-6 semaines.",
+      );
+    }
+    if (m.contains('étirement') || m.contains('souplesse') || m.contains('mobilité')) {
+      return "L'étirement statique se fait APRÈS la séance ou en récupération (jamais à froid). 10 min/jour suffisent. Pour la mobilité : ajoute des CARs (rotations articulaires contrôlées) au réveil. 🧘";
+    }
+    return "Je suis Coach Flow ! 💬 Pose-moi une question sur ton entraînement, ta nutrition, le sommeil, l'hydratation ou tes objectifs et je te donnerai un conseil adapté à ton niveau ${profile.level.label}. (Astuce : configure la clé OpenAI pour des réponses encore plus poussées.)";
   }
 
   /// A short proactive daily tip for the home screen.
@@ -177,6 +219,13 @@ Règles:
       "Ajoute 10 min de marche après chaque repas pour booster ta dépense. 🚶",
       "N'oublie pas tes protéines à chaque repas pour préserver ton muscle. 🍗",
       "La régularité bat l'intensité : une petite séance vaut mieux que zéro. 🔥",
+      "Échauffe-toi 5 min avant chaque séance — ça réduit drastiquement le risque de blessure. 🤸",
+      "Le stretching post-séance améliore la récupération et la souplesse. 5-10 min suffisent. 🧘",
+      "Pèse-toi toujours à la même heure, à jeun. C'est la tendance qui compte, pas le chiffre du jour. ⚖️",
+      "Une marche de 10 000 pas par jour ajoute ~400 kcal brûlées. Astuce : monte les escaliers ! 👟",
+      "Mange des fibres (légumes, fruits, céréales complètes) pour la satiété et la digestion. 🥦",
+      "Évite l'écran 30 min avant de dormir : ta qualité de sommeil sera meilleure. 📵",
+      "Note tes ressentis post-séance pour mieux ajuster la prochaine. Un carnet vaut mille séances ! 📓",
     ];
     return tips[DateTime.now().day % tips.length];
   }
