@@ -69,6 +69,32 @@ class NutritionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Log a meal that isn't part of any plan template (custom user meal).
+  /// Adds it to today's totals and persists it across app launches.
+  Future<void> logCustomMeal(Meal meal) async {
+    // Make sure the custom meal is resolvable when reading back from disk by
+    // attaching it to a private "custom" bucket on the current plans state.
+    final customIdx = _plans.indexWhere((p) => p.id == 'plan_custom_meals');
+    if (customIdx == -1) {
+      _plans = [
+        ..._plans,
+        NutritionPlan(
+          id: 'plan_custom_meals',
+          title: 'Repas personnalisés',
+          description: 'Tes repas loggés à la main.',
+          goal: Goal.getFit,
+          targetCalories: 0,
+          meals: [meal],
+        ),
+      ];
+    } else {
+      _plans[customIdx] = _plans[customIdx]
+          .copyWith(meals: [..._plans[customIdx].meals, meal]);
+    }
+    _entries.add(LoggedMealEntry(mealId: meal.id, loggedAt: DateTime.now()));
+    await _persist();
+  }
+
   /// Swap a meal inside a plan for a custom one (plans are editable templates).
   void replaceMeal(String planId, Meal oldMeal, Meal newMeal) {
     final i = _plans.indexWhere((p) => p.id == planId);
