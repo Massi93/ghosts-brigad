@@ -28,6 +28,11 @@ abstract class AuthService {
   Future<void> updateProfile(UserProfile profile);
 
   Future<void> signOut();
+
+  /// Permanently delete the user account and all data managed by this service.
+  /// Used by the GDPR "delete my account" flow. Implementations MUST also
+  /// remove any sub-collection the service owns (e.g. profile document).
+  Future<void> deleteAccount();
 }
 
 /// Local, device-only auth that persists the profile via [StorageService].
@@ -107,4 +112,10 @@ class LocalAuthService implements AuthService {
 
   @override
   Future<void> signOut() => _storage.remove(AppConstants.kUserProfile);
+
+  @override
+  Future<void> deleteAccount() async {
+    // Local impl: there is no remote record, just drop the persisted profile.
+    await _storage.remove(AppConstants.kUserProfile);
+  }
 }
