@@ -11,6 +11,7 @@ import '../../providers/user_provider.dart';
 import '../../providers/workout_provider.dart';
 import '../../services/ai_coach_service.dart';
 import '../coach/coach_screen.dart';
+import '../nutrition/daily_nutrition_tracker.dart';
 import '../profile/profile_screen.dart';
 import '../workout/program_detail_screen.dart';
 
@@ -118,7 +119,11 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Today's nutrition tracker (compact)
+            DailyNutritionTracker(profile: profile, compact: true),
+            const SizedBox(height: 16),
 
             // Quick stats
             Row(

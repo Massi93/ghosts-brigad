@@ -8,6 +8,7 @@ import '../../core/widgets/paywall_sheet.dart';
 import '../../models/nutrition_plan.dart';
 import '../../providers/nutrition_provider.dart';
 import '../../providers/user_provider.dart';
+import 'daily_nutrition_tracker.dart';
 import 'nutrition_plan_screen.dart';
 
 class NutritionScreen extends StatelessWidget {
@@ -62,6 +63,8 @@ class NutritionScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: 14),
+                DailyNutritionTracker(profile: profile),
                 const SizedBox(height: 14),
                 Row(
                   children: [
