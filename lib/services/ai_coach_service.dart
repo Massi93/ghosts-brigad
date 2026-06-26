@@ -36,24 +36,63 @@ Règles:
   }
 
   /// Send the conversation to the model and return the assistant reply.
+  ///
+  /// Routing, in order of preference:
+  /// 1. A backend proxy ([Env.apiBaseUrl]) — RECOMMENDED in production so the
+  ///    OpenAI key stays server-side (see functions/ + docs/FIREBASE.md).
+  /// 2. Direct OpenAI call ([Env.openAiApiKey]) — convenient for dev.
+  /// 3. Offline rule-based engine — always available (demo / free tier).
   Future<String> sendMessage({
     required UserProfile profile,
     required List<ChatMessage> history,
     required String userMessage,
   }) async {
-    if (!Env.hasOpenAi) {
-      return _offlineReply(profile, userMessage);
+    final messages = <Map<String, String>>[
+      {'role': 'system', 'content': buildSystemPrompt(profile)},
+      ...history
+          .where((m) => m.role != ChatRole.system)
+          .map((m) => m.toOpenAi()),
+      {'role': 'user', 'content': userMessage},
+    ];
+
+    if (Env.hasBackend) {
+      final reply = await _viaBackend(messages);
+      return reply ?? _offlineReply(profile, userMessage);
     }
+    if (Env.hasOpenAi) {
+      final reply = await _viaOpenAi(messages);
+      return reply ?? _offlineReply(profile, userMessage);
+    }
+    return _offlineReply(profile, userMessage);
+  }
 
+  /// Calls the backend proxy `POST $API_BASE_URL/coach`, which holds the
+  /// OpenAI key and returns `{ "reply": "..." }`. Returns null on any failure.
+  Future<String?> _viaBackend(List<Map<String, String>> messages) async {
     try {
-      final messages = <Map<String, String>>[
-        {'role': 'system', 'content': buildSystemPrompt(profile)},
-        ...history
-            .where((m) => m.role != ChatRole.system)
-            .map((m) => m.toOpenAi()),
-        {'role': 'user', 'content': userMessage},
-      ];
+      final res = await http
+          .post(
+            Uri.parse('${Env.apiBaseUrl}/coach'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'model': Env.openAiModel, 'messages': messages}),
+          )
+          .timeout(const Duration(seconds: 30));
+      if (res.statusCode == 200) {
+        final data =
+            jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+        final reply = (data['reply'] as String?)?.trim();
+        if (reply != null && reply.isNotEmpty) return reply;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
+  /// Direct OpenAI call (dev only — exposes the key in the client). Returns
+  /// null on any failure so the caller can fall back gracefully.
+  Future<String?> _viaOpenAi(List<Map<String, String>> messages) async {
+    try {
       final res = await http
           .post(
             Uri.parse(_endpoint),
@@ -69,17 +108,15 @@ Règles:
             }),
           )
           .timeout(const Duration(seconds: 30));
-
       if (res.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(res.bodyBytes))
-            as Map<String, dynamic>;
+        final data =
+            jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
         final choices = data['choices'] as List;
         return (choices.first['message']['content'] as String).trim();
       }
-      // Graceful degradation on API errors (rate limit, quota…).
-      return _offlineReply(profile, userMessage);
+      return null;
     } catch (_) {
-      return _offlineReply(profile, userMessage);
+      return null;
     }
   }
 
