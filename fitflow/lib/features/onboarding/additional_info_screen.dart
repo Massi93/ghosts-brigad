@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../providers/user_provider.dart';
+import '../../services/signup_relay_service.dart';
 
 /// Civil-status form shown right after a Google / Apple sign-up (and once
 /// after the very first email sign-up if details are missing). Captures first
@@ -51,18 +52,21 @@ class _AdditionalInfoScreenState extends State<AdditionalInfoScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     final user = context.read<UserProvider>();
+    final relay = context.read<SignupRelayService>();
     final current = user.profile!;
     final first = _firstName.text.trim();
     final last = _lastName.text.trim();
     final updated = current.copyWith(
       firstName: first,
       lastName: last,
-      name: '$first ${last}'.trim(),
+      name: '$first $last'.trim(),
       age: int.tryParse(_age.text.trim()) ?? current.age,
       phone: _phone.text.trim(),
       detailsComplete: true,
     );
     await user.updateProfile(updated);
+    // Mirror the new signup into the Google Sheet (best-effort, see env).
+    await relay.notifySignup(updated);
     if (mounted) setState(() => _saving = false);
   }
 
