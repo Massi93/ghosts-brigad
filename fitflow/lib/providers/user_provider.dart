@@ -43,10 +43,19 @@ class UserProvider extends ChangeNotifier {
     _setLoading(false);
   }
 
-  Future<void> signInWithProvider(String provider) async {
+  /// Returns false if the user cancelled or sign-in failed.
+  Future<bool> signInWithProvider(String provider) async {
     _setLoading(true);
-    _profile = await _auth.signInWithProvider(provider);
-    _setLoading(false);
+    try {
+      final profile = await _auth.signInWithProvider(provider);
+      if (profile == null) return false; // cancelled
+      _profile = profile;
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   Future<void> completeOnboarding({

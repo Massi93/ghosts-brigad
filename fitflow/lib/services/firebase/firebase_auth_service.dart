@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../models/user_profile.dart';
 import '../auth_service.dart';
@@ -88,23 +90,56 @@ class FirebaseAuthService implements AuthService {
     return _cached!;
   }
 
-  /// Social login. Real Google/Apple require the `google_sign_in` /
-  /// `sign_in_with_apple` packages and native config (see docs/FIREBASE.md).
-  /// Until then this falls back to a Firebase anonymous session so the flow
-  /// stays functional end-to-end.
+  /// Real Google / Apple sign-in via Firebase credentials.
+  /// Returns null if the user cancels the native sheet. Requires native config
+  /// (OAuth client, SHA-1, Apple capability) — see docs/FIREBASE.md §7.
   @override
-  Future<UserProfile> signInWithProvider(String provider) async {
-    final cred = await _auth.signInAnonymously();
-    final user = cred.user!;
-    final profile = UserProfile(
-      id: user.uid,
-      name: 'Athlète FitFlow',
-      email: user.email ?? 'anonymous@$provider.fitflow',
-      createdAt: DateTime.now(),
+  Future<UserProfile?> signInWithProvider(String provider) async {
+    final UserCredential cred;
+    switch (provider) {
+      case 'google':
+        final credential = await _googleCredential();
+        if (credential == null) return null; // cancelled
+        cred = await _auth.signInWithCredential(credential);
+        break;
+      case 'apple':
+        final credential = await _appleCredential();
+        if (credential == null) return null; // cancelled
+        cred = await _auth.signInWithCredential(credential);
+        break;
+      default:
+        return null;
+    }
+    _cached = await _loadOrCreateProfile(cred.user!);
+    return _cached;
+  }
+
+  Future<AuthCredential?> _googleCredential() async {
+    final account = await GoogleSignIn().signIn();
+    if (account == null) return null; // user cancelled
+    final auth = await account.authentication;
+    return GoogleAuthProvider.credential(
+      accessToken: auth.accessToken,
+      idToken: auth.idToken,
     );
-    await _doc(user.uid).set(profile.toJson());
-    _cached = profile;
-    return profile;
+  }
+
+  Future<AuthCredential?> _appleCredential() async {
+    try {
+      final apple = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      return OAuthProvider('apple.com').credential(
+        idToken: apple.identityToken,
+        accessToken: apple.authorizationCode,
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return null;
+      rethrow;
+    }
   }
 
   @override

@@ -22,8 +22,8 @@ abstract class AuthService {
     required String password,
   });
 
-  /// Social login (e.g. 'google', 'apple').
-  Future<UserProfile> signInWithProvider(String provider);
+  /// Social login (e.g. 'google', 'apple'). Returns null if the user cancels.
+  Future<UserProfile?> signInWithProvider(String provider);
 
   Future<void> updateProfile(UserProfile profile);
 
@@ -83,7 +83,7 @@ class LocalAuthService implements AuthService {
   }
 
   @override
-  Future<UserProfile> signInWithProvider(String provider) async {
+  Future<UserProfile?> signInWithProvider(String provider) async {
     await Future<void>.delayed(const Duration(milliseconds: 500));
     final profile = UserProfile(
       id: _uuid.v4(),
