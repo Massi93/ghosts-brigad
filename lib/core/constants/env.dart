@@ -36,6 +36,12 @@ class Env {
   static const bool useFirebase =
       bool.fromEnvironment('USE_FIREBASE', defaultValue: false);
 
+  /// Test/QA flag: unlock all Premium features (no payment) so the whole app
+  /// can be tried without freemium limits. Enable for test builds only:
+  /// `--dart-define=DEMO_PREMIUM=true`. NEVER enable for store releases.
+  static const bool demoPremium =
+      bool.fromEnvironment('DEMO_PREMIUM', defaultValue: false);
+
   static bool get hasOpenAi => openAiApiKey.isNotEmpty;
   static bool get hasBackend => apiBaseUrl.isNotEmpty;
   static bool get hasRevenueCat => revenueCatKey.isNotEmpty;

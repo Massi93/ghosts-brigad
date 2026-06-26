@@ -1,4 +1,5 @@
 import '../core/constants/app_constants.dart';
+import '../core/constants/env.dart';
 import 'storage_service.dart';
 
 enum SubscriptionTier { free, premium }
@@ -20,6 +21,8 @@ class SubscriptionService {
   final StorageService _storage;
 
   SubscriptionTier get tier {
+    // Test builds unlock everything via DEMO_PREMIUM.
+    if (Env.demoPremium) return SubscriptionTier.premium;
     final isPremium = _storage.readBool(AppConstants.kSubscription);
     return isPremium ? SubscriptionTier.premium : SubscriptionTier.free;
   }

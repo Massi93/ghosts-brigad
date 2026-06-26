@@ -75,8 +75,10 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK (release, debug-signed)
-        run: flutter build apk --release
+      - name: Build APK (release, debug-signed, full-access test build)
+        # DEMO_PREMIUM unlocks all Premium features so the app can be fully
+        # tested with no payment. Remove this flag for real store builds.
+        run: flutter build apk --release --dart-define=DEMO_PREMIUM=true
 
       - name: Stage APK
         run: |
