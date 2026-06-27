@@ -51,6 +51,11 @@ dependencies:
   share_plus: ^10.0.2
   url_launcher: ^6.3.0
 
+  # Lottie vector animations for the login hero (real-looking humans doing
+  # exercises). Falls back gracefully to the custom-painted animated mesh
+  # gradient + particle field when offline / URL unreachable.
+  lottie: ^3.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
