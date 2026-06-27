@@ -26,6 +26,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
+  // Make the status bar fully transparent so the login hero bleeds edge-to-edge.
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: Color(0xFF0E1116),
+    systemNavigationBarIconBrightness: Brightness.light,
+  ));
+
   // Bootstrap the local persistence + service layer.
   final storage = await StorageService.init();
   final content = ContentService();

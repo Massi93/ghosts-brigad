@@ -17,14 +17,24 @@ import '../../core/theme/app_colors.dart';
 class AnimatedFitnessHero extends StatefulWidget {
   const AnimatedFitnessHero({super.key});
 
-  /// Stable Unsplash photo URLs (same CDN pattern that works for meals).
-  /// Each photo features people training in a gym setting.
+  /// Stable Unsplash photo URLs — diverse cast of real people in a gym
+  /// setting (couples, women, men of different backgrounds). Same CDN
+  /// pattern that proved reliable for the meal images.
   static const List<String> _scenes = [
-    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1080&q=80&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1080&q=80&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=1080&q=80&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1605296867424-35fc25c9212a?w=1080&q=80&auto=format&fit=crop',
+    // Couple training together
     'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=1080&q=80&auto=format&fit=crop',
+    // Black woman strength training
+    'https://images.unsplash.com/photo-1546484475-7f7bd55792da?w=1080&q=80&auto=format&fit=crop',
+    // Man lifting / focus shot
+    'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=1080&q=80&auto=format&fit=crop',
+    // Group / community workout
+    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1080&q=80&auto=format&fit=crop',
+    // Woman with dumbbells
+    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1080&q=80&auto=format&fit=crop',
+    // Athlete portrait
+    'https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=1080&q=80&auto=format&fit=crop',
+    // Gym scene
+    'https://images.unsplash.com/photo-1605296867424-35fc25c9212a?w=1080&q=80&auto=format&fit=crop',
   ];
 
   @override

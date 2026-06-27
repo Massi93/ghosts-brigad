@@ -3,7 +3,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = 'FitFlow';
-  static const String tagline = 'Ton coach fitness & nutrition par IA';
+  static const String tagline = 'Ton coach fitness & nutrition';
 
   // Monetisation
   static const double premiumMonthlyPriceEur = 4.99;
