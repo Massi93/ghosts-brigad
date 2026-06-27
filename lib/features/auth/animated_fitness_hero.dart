@@ -7,25 +7,24 @@ import '../../core/theme/app_colors.dart';
 
 /// Animated background for the login / sign-up screen.
 ///
-/// Cycles through a curated set of real-photo fitness scenes (man and woman
-/// training in a gym) with two layered effects:
-///   • Cross-fade between photos every ~6s
-///   • Continuous slow zoom ("ken-burns") on the current photo
-///
-/// A dark gradient overlay is applied on top so the form panel stays legible.
-/// If a specific image URL ever 404s, the CachedNetworkImage errorWidget
-/// renders a soft charcoal panel — the cycle continues silently.
+/// Two layers, in this order (bottom → top):
+/// 1. Animated colour gradient that always renders — guarantees the screen
+///    is alive even before the network photos arrive (or if they fail).
+/// 2. Cycling real-photo fitness scenes (man and woman training in a gym)
+///    with cross-fade between photos + a continuous slow "ken-burns" zoom
+///    on the current photo.
+/// 3. A subtle dark overlay so the form panel on top stays legible.
 class AnimatedFitnessHero extends StatefulWidget {
   const AnimatedFitnessHero({super.key});
 
-  /// Curated stable Pexels image URLs (gym training, man + woman). Pexels
-  /// CDN URLs are stable as long as the photo isn't removed by the author.
+  /// Stable Unsplash photo URLs (same CDN pattern that works for meals).
+  /// Each photo features people training in a gym setting.
   static const List<String> _scenes = [
-    'https://images.pexels.com/photos/1552249/pexels-photo-1552249.jpeg?auto=compress&cs=tinysrgb&w=1080',
-    'https://images.pexels.com/photos/4498151/pexels-photo-4498151.jpeg?auto=compress&cs=tinysrgb&w=1080',
-    'https://images.pexels.com/photos/4793361/pexels-photo-4793361.jpeg?auto=compress&cs=tinysrgb&w=1080',
-    'https://images.pexels.com/photos/4498298/pexels-photo-4498298.jpeg?auto=compress&cs=tinysrgb&w=1080',
-    'https://images.pexels.com/photos/2294361/pexels-photo-2294361.jpeg?auto=compress&cs=tinysrgb&w=1080',
+    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1080&q=80&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1080&q=80&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=1080&q=80&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1605296867424-35fc25c9212a?w=1080&q=80&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=1080&q=80&auto=format&fit=crop',
   ];
 
   @override
@@ -39,11 +38,9 @@ class _AnimatedFitnessHeroState extends State<AnimatedFitnessHero> {
   @override
   void initState() {
     super.initState();
-    // Pre-cache the first two images so the very first transition is smooth.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      for (final url
-          in AnimatedFitnessHero._scenes.take(2)) {
+      for (final url in AnimatedFitnessHero._scenes.take(2)) {
         precacheImage(CachedNetworkImageProvider(url), context);
       }
     });
@@ -65,7 +62,10 @@ class _AnimatedFitnessHeroState extends State<AnimatedFitnessHero> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Each scene fades in for ~1.5s while a slow ken-burns zoom plays.
+        // Always-on animated gradient — guarantees the screen is alive.
+        const _AnimatedGradientBackdrop(),
+
+        // Cycling fitness photos with ken-burns zoom.
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 1500),
           switchInCurve: Curves.easeOut,
@@ -76,23 +76,83 @@ class _AnimatedFitnessHeroState extends State<AnimatedFitnessHero> {
           ),
         ),
 
-        // Dark gradient so the form on top stays legible (lighter at top,
-        // very dark at bottom where the form sits).
+        // Light dark gradient overlay (lighter at top so the photo shows,
+        // heavier at bottom where the form sits).
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              stops: [0, 0.3, 1],
+              stops: [0, 0.45, 1],
               colors: [
-                Color(0x99000000),
-                Color(0xAA000000),
-                Color(0xF20E1116),
+                Color(0x33000000), // 20% — keep photo visible at top
+                Color(0x77000000), // 47%
+                Color(0xE60E1116), // 90% — solid dark at bottom for the form
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Animated colour gradient (electric green ↔ blue ↔ violet) that slowly
+/// pulses. Visible whenever the network photos haven't loaded yet, and
+/// underneath them otherwise — guarantees the screen always feels alive.
+class _AnimatedGradientBackdrop extends StatefulWidget {
+  const _AnimatedGradientBackdrop();
+
+  @override
+  State<_AnimatedGradientBackdrop> createState() =>
+      _AnimatedGradientBackdropState();
+}
+
+class _AnimatedGradientBackdropState extends State<_AnimatedGradientBackdrop>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  static const _palette = [
+    AppColors.primary,
+    AppColors.accent,
+    AppColors.secondary,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, _) {
+        final t = _ctrl.value;
+        final a = _palette[0].withOpacity(0.30 + 0.10 * t);
+        final b = _palette[1].withOpacity(0.20 + 0.15 * (1 - t));
+        final c = _palette[2].withOpacity(0.25 + 0.10 * t);
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment(-1 + t * 0.6, -1),
+              end: Alignment(1, 1 - t * 0.6),
+              colors: [AppColors.background, a, b, c, AppColors.background],
+              stops: const [0, 0.25, 0.5, 0.75, 1],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -138,8 +198,10 @@ class _KenBurnsImageState extends State<_KenBurnsImage>
         imageUrl: widget.url,
         fit: BoxFit.cover,
         fadeInDuration: const Duration(milliseconds: 600),
-        placeholder: (_, __) => Container(color: AppColors.background),
-        errorWidget: (_, __, ___) => Container(color: AppColors.background),
+        // Transparent placeholder + error: the animated gradient below
+        // remains visible, no ugly dark panels overlay.
+        placeholder: (_, __) => const SizedBox.expand(),
+        errorWidget: (_, __, ___) => const SizedBox.expand(),
       ),
     );
   }
