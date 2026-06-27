@@ -2,39 +2,41 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../core/theme/app_colors.dart';
 
 /// Animated background for the login / sign-up screen.
 ///
-/// Two layers, in this order (bottom → top):
+/// Three layers, in order (bottom → top):
 /// 1. Animated colour gradient that always renders — guarantees the screen
-///    is alive even before the network photos arrive (or if they fail).
-/// 2. Cycling real-photo fitness scenes (man and woman training in a gym)
-///    with cross-fade between photos + a continuous slow "ken-burns" zoom
-///    on the current photo.
-/// 3. A subtle dark overlay so the form panel on top stays legible.
+///    is alive even before the network media arrives.
+/// 2. Cycling real-photo fitness scenes with cross-fade + slow ken-burns.
+///    Top-aligned BoxFit so faces stay in frame, not chopped off.
+/// 3. Optional muted-looped fitness video that fades in once it has buffered.
+///    If the video URL fails, the photo carousel underneath is still showing.
+/// 4. Dark gradient overlay so the form stays legible.
 class AnimatedFitnessHero extends StatefulWidget {
   const AnimatedFitnessHero({super.key});
 
-  /// Stable Unsplash photo URLs — diverse cast of real people in a gym
-  /// setting (couples, women, men of different backgrounds). Same CDN
-  /// pattern that proved reliable for the meal images.
+  /// Curated Unsplash photo URLs — diverse cast of real people training,
+  /// chosen for portrait-ish framing so faces remain visible after cover-fit.
   static const List<String> _scenes = [
-    // Couple training together
     'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=1080&q=80&auto=format&fit=crop',
-    // Black woman strength training
     'https://images.unsplash.com/photo-1546484475-7f7bd55792da?w=1080&q=80&auto=format&fit=crop',
-    // Man lifting / focus shot
     'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=1080&q=80&auto=format&fit=crop',
-    // Group / community workout
     'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1080&q=80&auto=format&fit=crop',
-    // Woman with dumbbells
     'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1080&q=80&auto=format&fit=crop',
-    // Athlete portrait
     'https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=1080&q=80&auto=format&fit=crop',
-    // Gym scene
-    'https://images.unsplash.com/photo-1605296867424-35fc25c9212a?w=1080&q=80&auto=format&fit=crop',
+  ];
+
+  /// Pexels muted gym/workout videos. Each entry is tried in order; the
+  /// first that loads becomes the background. URLs follow the stable
+  /// `videos.pexels.com/video-files/{id}/...mp4` pattern.
+  static const List<String> _videoUrls = [
+    'https://videos.pexels.com/video-files/4761426/4761426-hd_1920_1080_25fps.mp4',
+    'https://videos.pexels.com/video-files/2795746/2795746-hd_1920_1080_30fps.mp4',
+    'https://videos.pexels.com/video-files/5319134/5319134-hd_1920_1080_30fps.mp4',
   ];
 
   @override
@@ -72,10 +74,10 @@ class _AnimatedFitnessHeroState extends State<AnimatedFitnessHero> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Always-on animated gradient — guarantees the screen is alive.
+        // 1) Always-on animated gradient.
         const _AnimatedGradientBackdrop(),
 
-        // Cycling fitness photos with ken-burns zoom.
+        // 2) Photo carousel with subtle ken-burns, faces aligned to top.
         Positioned.fill(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 1500),
@@ -88,8 +90,12 @@ class _AnimatedFitnessHeroState extends State<AnimatedFitnessHero> {
           ),
         ),
 
-        // Light dark gradient overlay (lighter at top so the photo shows,
-        // heavier at bottom where the form sits).
+        // 3) Muted-looped fitness video. Fades in only once buffered;
+        //    until then (or if all URLs fail), the photos stay visible.
+        const Positioned.fill(child: _FitnessVideoLayer()),
+
+        // 4) Dark gradient overlay for form legibility (lighter at top,
+        //    almost opaque at bottom where the form sits).
         const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -97,9 +103,9 @@ class _AnimatedFitnessHeroState extends State<AnimatedFitnessHero> {
               end: Alignment.bottomCenter,
               stops: [0, 0.45, 1],
               colors: [
-                Color(0x33000000), // 20% — keep photo visible at top
-                Color(0x77000000), // 47%
-                Color(0xE60E1116), // 90% — solid dark at bottom for the form
+                Color(0x33000000),
+                Color(0x77000000),
+                Color(0xE60E1116),
               ],
             ),
           ),
@@ -109,9 +115,9 @@ class _AnimatedFitnessHeroState extends State<AnimatedFitnessHero> {
   }
 }
 
-/// Animated colour gradient (electric green ↔ blue ↔ violet) that slowly
-/// pulses. Visible whenever the network photos haven't loaded yet, and
-/// underneath them otherwise — guarantees the screen always feels alive.
+// ===========================================================================
+// Layer: animated colour gradient (always on)
+// ===========================================================================
 class _AnimatedGradientBackdrop extends StatefulWidget {
   const _AnimatedGradientBackdrop();
 
@@ -169,8 +175,9 @@ class _AnimatedGradientBackdropState extends State<_AnimatedGradientBackdrop>
   }
 }
 
-/// A single image that slowly zooms in from 1.0 to 1.15 over ~7 seconds for
-/// a subtle "ken-burns" cinematic feel.
+// ===========================================================================
+// Layer: ken-burns image
+// ===========================================================================
 class _KenBurnsImage extends StatefulWidget {
   const _KenBurnsImage({super.key, required this.url});
   final String url;
@@ -188,7 +195,7 @@ class _KenBurnsImageState extends State<_KenBurnsImage>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 7),
+      duration: const Duration(seconds: 10),
     )..forward();
   }
 
@@ -203,20 +210,93 @@ class _KenBurnsImageState extends State<_KenBurnsImage>
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, child) {
-        final scale = 1.0 + (_ctrl.value * 0.15);
+        // Gentler zoom (1.0 → 1.07) so faces stay roughly in frame.
+        final scale = 1.0 + (_ctrl.value * 0.07);
         return Transform.scale(scale: scale, child: child);
       },
-      // SizedBox.expand forces the CachedNetworkImage to receive the parent's
-      // bounded constraints, so BoxFit.cover actually fills the whole screen.
       child: SizedBox.expand(
         child: CachedNetworkImage(
           imageUrl: widget.url,
           fit: BoxFit.cover,
+          // Top-aligned: with portrait phone screens + landscape source photos
+          // the default centre alignment cuts off heads. Top alignment keeps
+          // faces visible.
+          alignment: Alignment.topCenter,
           fadeInDuration: const Duration(milliseconds: 600),
-          // Transparent placeholder + error: the animated gradient below
-          // remains visible, no ugly dark panels overlay.
           placeholder: (_, __) => const SizedBox.expand(),
           errorWidget: (_, __, ___) => const SizedBox.expand(),
+        ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// Layer: muted looping fitness video (Pexels). Fades in only when ready.
+// ===========================================================================
+class _FitnessVideoLayer extends StatefulWidget {
+  const _FitnessVideoLayer();
+
+  @override
+  State<_FitnessVideoLayer> createState() => _FitnessVideoLayerState();
+}
+
+class _FitnessVideoLayerState extends State<_FitnessVideoLayer> {
+  VideoPlayerController? _ctrl;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tryLoad();
+  }
+
+  Future<void> _tryLoad() async {
+    for (final url in AnimatedFitnessHero._videoUrls) {
+      final candidate = VideoPlayerController.networkUrl(Uri.parse(url));
+      try {
+        await candidate.initialize();
+        await candidate.setLooping(true);
+        await candidate.setVolume(0);
+        await candidate.play();
+        if (!mounted) {
+          await candidate.dispose();
+          return;
+        }
+        setState(() {
+          _ctrl = candidate;
+          _ready = true;
+        });
+        return;
+      } catch (_) {
+        await candidate.dispose();
+        // Try the next URL.
+      }
+    }
+    // All URLs failed → the photo layer underneath keeps the screen alive.
+  }
+
+  @override
+  void dispose() {
+    _ctrl?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready || _ctrl == null) return const SizedBox.shrink();
+    return AnimatedOpacity(
+      opacity: 1,
+      duration: const Duration(milliseconds: 800),
+      child: SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: _ctrl!.value.size.width,
+            height: _ctrl!.value.size.height,
+            child: VideoPlayer(_ctrl!),
+          ),
         ),
       ),
     );
