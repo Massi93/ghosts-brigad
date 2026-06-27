@@ -206,9 +206,9 @@ class _Logo extends StatelessWidget {
               ],
             ),
             child: const Icon(
-              Icons.bolt_rounded,
+              Icons.fitness_center,
               color: Colors.black,
-              size: 56,
+              size: 50,
             ),
           ),
           const SizedBox(height: 14),
