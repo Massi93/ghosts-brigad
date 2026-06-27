@@ -76,13 +76,15 @@ class _AnimatedFitnessHeroState extends State<AnimatedFitnessHero> {
         const _AnimatedGradientBackdrop(),
 
         // Cycling fitness photos with ken-burns zoom.
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 1500),
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          child: _KenBurnsImage(
-            key: ValueKey(_index),
-            url: AnimatedFitnessHero._scenes[_index],
+        Positioned.fill(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 1500),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            child: _KenBurnsImage(
+              key: ValueKey(_index),
+              url: AnimatedFitnessHero._scenes[_index],
+            ),
           ),
         ),
 
@@ -204,14 +206,18 @@ class _KenBurnsImageState extends State<_KenBurnsImage>
         final scale = 1.0 + (_ctrl.value * 0.15);
         return Transform.scale(scale: scale, child: child);
       },
-      child: CachedNetworkImage(
-        imageUrl: widget.url,
-        fit: BoxFit.cover,
-        fadeInDuration: const Duration(milliseconds: 600),
-        // Transparent placeholder + error: the animated gradient below
-        // remains visible, no ugly dark panels overlay.
-        placeholder: (_, __) => const SizedBox.expand(),
-        errorWidget: (_, __, ___) => const SizedBox.expand(),
+      // SizedBox.expand forces the CachedNetworkImage to receive the parent's
+      // bounded constraints, so BoxFit.cover actually fills the whole screen.
+      child: SizedBox.expand(
+        child: CachedNetworkImage(
+          imageUrl: widget.url,
+          fit: BoxFit.cover,
+          fadeInDuration: const Duration(milliseconds: 600),
+          // Transparent placeholder + error: the animated gradient below
+          // remains visible, no ugly dark panels overlay.
+          placeholder: (_, __) => const SizedBox.expand(),
+          errorWidget: (_, __, ___) => const SizedBox.expand(),
+        ),
       ),
     );
   }
