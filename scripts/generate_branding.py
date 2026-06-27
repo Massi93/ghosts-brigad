@@ -3,12 +3,13 @@
 Usage:  python3 scripts/generate_branding.py   (run from the fitflow/ directory)
 Requires Pillow:  python3 -m pip install Pillow
 
-Premium look: dark charcoal base with a vivid green→blue gradient lightning
-bolt, plus a subtle glow ring for depth. Distinct from the previous
-"black bolt over flat gradient" style.
+Premium look: dark charcoal base with a vivid green→blue gradient stylised
+dumbbell mark + a subtle radial glow. Distinct, universally readable as a
+fitness app.
 """
 import math
 import os
+
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = os.path.join(
@@ -19,17 +20,12 @@ os.makedirs(OUT, exist_ok=True)
 
 GREEN = (0, 230, 118)      # #00E676
 BLUE = (0, 176, 255)       # #00B0FF
-VIOLET = (124, 77, 255)    # #7C4DFF
 CHARCOAL = (14, 17, 22)    # #0E1116
-SURFACE = (23, 28, 36)     # #171C24
-
-# Lightning bolt polygon, normalised to a unit box.
-BOLT = [
-    (0.55, 0.06), (0.25, 0.54), (0.45, 0.54),
-    (0.38, 0.94), (0.78, 0.40), (0.56, 0.40), (0.70, 0.06),
-]
 
 
+# ---------------------------------------------------------------------------
+# Drawing helpers
+# ---------------------------------------------------------------------------
 def diagonal_gradient(size, c1, c2):
     """Smooth diagonal gradient image c1(top-left) -> c2(bottom-right)."""
     img = Image.new("RGB", (size, size))
@@ -58,63 +54,90 @@ def radial_glow(size, center, radius, color, max_alpha):
     return img
 
 
-def bolt_points(size, scale, cx=0.5, cy=0.5):
-    """Place the bolt centred, occupying `scale` of the box."""
-    pts = []
-    for nx, ny in BOLT:
-        x = cx + (nx - 0.5) * scale
-        y = cy + (ny - 0.5) * scale
-        pts.append((x * size, y * size))
-    return pts
+def draw_dumbbell(size, scale=0.7):
+    """Return a mono (L mode) mask of a stylised horizontal dumbbell, centred.
+
+    Layout (unit box, 1.0 = full size):
+        plates:     two rounded rectangles at x=0.13 / x=0.87
+        bar:        thin rectangle connecting them
+        weights:    thicker outer caps for the heavy look
+    """
+    s = size
+    mask = Image.new("L", (s, s), 0)
+    d = ImageDraw.Draw(mask)
+
+    # Normalised metrics, then scale them to `scale` * s, centred on the box.
+    cx, cy = 0.5, 0.5
+
+    def rect(x0, y0, x1, y1, radius=0):
+        # Convert from unit-box around (cx, cy) with `scale` factor → pixels.
+        ux0 = cx + (x0 - 0.5) * scale
+        uy0 = cy + (y0 - 0.5) * scale
+        ux1 = cx + (x1 - 0.5) * scale
+        uy1 = cy + (y1 - 0.5) * scale
+        px = [ux0 * s, uy0 * s, ux1 * s, uy1 * s]
+        if radius > 0:
+            d.rounded_rectangle(px, radius=radius * s, fill=255)
+        else:
+            d.rectangle(px, fill=255)
+
+    # Centre bar (horizontal grip)
+    rect(0.20, 0.46, 0.80, 0.54)
+
+    # Inner plates (slightly bigger than the bar)
+    rect(0.18, 0.38, 0.30, 0.62, radius=0.018)
+    rect(0.70, 0.38, 0.82, 0.62, radius=0.018)
+
+    # Outer plates (the chunky weights)
+    rect(0.08, 0.30, 0.20, 0.70, radius=0.025)
+    rect(0.80, 0.30, 0.92, 0.70, radius=0.025)
+
+    return mask
 
 
+# ---------------------------------------------------------------------------
+# Asset builders
+# ---------------------------------------------------------------------------
 def make_app_icon(size=1024):
-    """Premium icon: charcoal base + green→blue gradient bolt + glow."""
+    """Premium icon: charcoal base + green→blue gradient dumbbell + glow."""
     base = Image.new("RGBA", (size, size), CHARCOAL + (255,))
 
-    # Outer radial glow (green) for depth — looks like the icon is lit.
-    glow = radial_glow(size, (size // 2, size // 2), size * 0.55, GREEN, 90)
+    # Outer radial glow (green) → the icon feels lit from within.
+    glow = radial_glow(size, (size // 2, size // 2), size * 0.55, GREEN, 95)
     glow = glow.filter(ImageFilter.GaussianBlur(size * 0.04))
     base.alpha_composite(glow)
 
-    # The bolt is drawn on its own gradient image, then masked into the icon.
+    # Stylised dumbbell on a gradient body.
     grad = diagonal_gradient(size, GREEN, BLUE).convert("RGBA")
-    mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(mask).polygon(bolt_points(size, 0.60), fill=255)
-    # Blur the mask edges very slightly for a softer cut.
-    mask = mask.filter(ImageFilter.GaussianBlur(1.5))
-    bolt = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    bolt.paste(grad, (0, 0), mask)
+    mask = draw_dumbbell(size, scale=0.78)
+    mask = mask.filter(ImageFilter.GaussianBlur(1.2))
+    body = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    body.paste(grad, (0, 0), mask)
 
-    # Drop shadow under the bolt.
-    shadow_mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(shadow_mask).polygon(
-        [(x, y + size * 0.012) for x, y in bolt_points(size, 0.60)],
-        fill=180,
-    )
+    # Drop shadow underneath the dumbbell.
+    shadow_mask = draw_dumbbell(size, scale=0.78)
     shadow_mask = shadow_mask.filter(ImageFilter.GaussianBlur(size * 0.025))
-    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    shadow = Image.new("RGBA", (size, size), (0, 0, 0, 200))
     shadow.putalpha(shadow_mask)
-    base.alpha_composite(shadow)
-    base.alpha_composite(bolt)
+    # Offset shadow slightly downward.
+    base.alpha_composite(shadow, dest=(0, int(size * 0.012)))
 
+    base.alpha_composite(body)
     base.convert("RGB").save(f"{OUT}/icon_1024.png")
 
 
-def make_foreground(size=1024, scale=0.46):
-    """Transparent background, gradient bolt (for Android adaptive icon)."""
+def make_foreground(size=1024, scale=0.62):
+    """Transparent background, gradient dumbbell (Android adaptive icon)."""
     grad = diagonal_gradient(size, GREEN, BLUE).convert("RGBA")
-    mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(mask).polygon(bolt_points(size, scale), fill=255)
+    mask = draw_dumbbell(size, scale=scale)
     out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     out.paste(grad, (0, 0), mask)
     out.save(f"{OUT}/icon_foreground.png")
 
 
-def make_splash(size=1024, scale=0.7):
+def make_splash(size=1024, scale=0.9):
     grad = diagonal_gradient(size, GREEN, BLUE).convert("RGBA")
-    mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(mask).polygon(bolt_points(size, scale), fill=255)
+    mask = draw_dumbbell(size, scale=scale)
     out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     out.paste(grad, (0, 0), mask)
     out.save(f"{OUT}/splash.png")
