@@ -182,26 +182,48 @@ class _Logo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Premium mark — gradient disc + glowing bolt.
           Container(
-            padding: const EdgeInsets.all(12),
+            width: 96,
+            height: 96,
             decoration: BoxDecoration(
               gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(16),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.55),
+                  blurRadius: 30,
+                  spreadRadius: 2,
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.4),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            child: const Icon(Icons.bolt, color: Colors.black, size: 30),
+            child: const Icon(
+              Icons.bolt_rounded,
+              color: Colors.black,
+              size: 56,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(height: 14),
+          // App name with subtle gradient shader.
           ShaderMask(
             shaderCallback: (r) => AppColors.primaryGradient.createShader(r),
             child: const Text(
               AppConstants.appName,
               style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white),
+                fontSize: 44,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 1.2,
+                height: 1.0,
+              ),
             ),
           ),
         ],
