@@ -1,0 +1,31 @@
+node_modules/
+.next/
+dist/
+build/
+*.log
+.env
+.env.local
+.DS_Store
+coverage/
+.turbo/
+.idea/
+.vscode/
+*.iml
+
+# SQLite dev database
+apps/api/dev.db
+apps/api/dev.db-journal
+apps/api/dev.db-shm
+apps/api/dev.db-wal
+
+# Android
+apps/android/.gradle/
+apps/android/build/
+apps/android/app/build/
+apps/android/local.properties
+apps/android/captures/
+apps/android/.cxx/
+*.apk
+*.aab
+*.keystore
+!debug.keystore

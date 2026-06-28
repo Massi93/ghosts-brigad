@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+html, body {
+  background: #fafafa;
+  color: #0a0a0a;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-5 py-3 text-sm font-medium uppercase tracking-wider2 transition-colors;
+  }
+  .btn-primary {
+    @apply bg-ink text-paper hover:bg-neutral-800;
+  }
+  .btn-outline {
+    @apply border border-ink text-ink hover:bg-ink hover:text-paper;
+  }
+  .container-page {
+    @apply mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-10;
+  }
+}
