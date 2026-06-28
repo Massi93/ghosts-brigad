@@ -1,10 +1,11 @@
-import { Router } from 'express';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { and, asc, desc, eq, like, or, sql } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { categories, products } from '../db/schema.js';
+import { db } from '@/server/db';
+import { ensureDbReady } from '@/server/db/init';
+import { categories, products } from '@/server/db/schema';
 
-export const productsRouter = Router();
+export const runtime = 'nodejs';
 
 const listQuery = z.object({
   category: z.string().optional(),
@@ -15,16 +16,20 @@ const listQuery = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-productsRouter.get('/', async (req, res) => {
-  const parsed = listQuery.safeParse(req.query);
-  if (!parsed.success) return res.status(400).json({ error: 'invalid_query' });
+export async function GET(req: Request) {
+  await ensureDbReady();
+  const url = new URL(req.url);
+  const parsed = listQuery.safeParse(Object.fromEntries(url.searchParams));
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'invalid_query' }, { status: 400 });
+  }
   const { category, search, sort, featured, limit, offset } = parsed.data;
 
   const conditions = [] as ReturnType<typeof eq>[];
   if (category) {
-    const cat = db.select().from(categories).where(eq(categories.slug, category)).get();
+    const cat = await db.select().from(categories).where(eq(categories.slug, category)).get();
     if (cat) conditions.push(eq(products.categoryId, cat.id));
-    else return res.json({ items: [], total: 0, limit, offset });
+    else return NextResponse.json({ items: [], total: 0, limit, offset });
   }
   if (featured !== undefined) conditions.push(eq(products.featured, featured));
   if (search) {
@@ -41,7 +46,7 @@ productsRouter.get('/', async (req, res) => {
         ? desc(products.priceCents)
         : desc(products.createdAt);
 
-  const rows = db
+  const rows = await db
     .select({
       id: products.id,
       slug: products.slug,
@@ -64,13 +69,13 @@ productsRouter.get('/', async (req, res) => {
     .offset(offset)
     .all();
 
-  const totalRow = db
+  const totalRow = await db
     .select({ c: sql<number>`count(*)` })
     .from(products)
     .where(where)
     .get();
 
-  res.json({
+  return NextResponse.json({
     items: rows.map((r) => ({
       id: r.id,
       slug: r.slug,
@@ -88,42 +93,4 @@ productsRouter.get('/', async (req, res) => {
     limit,
     offset,
   });
-});
-
-productsRouter.get('/:slug', async (req, res) => {
-  const row = db
-    .select({
-      id: products.id,
-      slug: products.slug,
-      name: products.name,
-      description: products.description,
-      priceCents: products.priceCents,
-      currency: products.currency,
-      imageUrl: products.imageUrl,
-      stock: products.stock,
-      featured: products.featured,
-      categoryId: products.categoryId,
-      categorySlug: categories.slug,
-      categoryName: categories.name,
-    })
-    .from(products)
-    .leftJoin(categories, eq(products.categoryId, categories.id))
-    .where(eq(products.slug, req.params.slug))
-    .get();
-
-  if (!row) return res.status(404).json({ error: 'not_found' });
-
-  res.json({
-    id: row.id,
-    slug: row.slug,
-    name: row.name,
-    description: row.description,
-    priceCents: row.priceCents,
-    currency: row.currency,
-    imageUrl: row.imageUrl,
-    stock: row.stock,
-    featured: row.featured,
-    categoryId: row.categoryId,
-    category: row.categorySlug ? { id: row.categoryId, slug: row.categorySlug, name: row.categoryName! } : null,
-  });
-});
+}

@@ -13,10 +13,10 @@ coverage/
 *.iml
 
 # SQLite dev database
-apps/api/dev.db
-apps/api/dev.db-journal
-apps/api/dev.db-shm
-apps/api/dev.db-wal
+apps/web/dev.db
+apps/web/dev.db-journal
+apps/web/dev.db-shm
+apps/web/dev.db-wal
 
 # Android
 apps/android/.gradle/

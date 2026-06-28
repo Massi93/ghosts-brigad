@@ -28,3 +28,9 @@ export function hashPassword(plain: string): Promise<string> {
 export function checkPassword(plain: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plain, hash);
 }
+
+export function authFromRequest(req: Request): JwtPayload | null {
+  const header = req.headers.get('authorization');
+  if (!header?.startsWith('Bearer ')) return null;
+  return verifyToken(header.slice(7));
+}

@@ -1,12 +1,14 @@
-import { Router } from 'express';
+import { NextResponse } from 'next/server';
 import { asc, eq, sql } from 'drizzle-orm';
-import { db } from '../db/index.js';
-import { categories, products } from '../db/schema.js';
+import { db } from '@/server/db';
+import { ensureDbReady } from '@/server/db/init';
+import { categories, products } from '@/server/db/schema';
 
-export const categoriesRouter = Router();
+export const runtime = 'nodejs';
 
-categoriesRouter.get('/', async (_req, res) => {
-  const rows = db
+export async function GET() {
+  await ensureDbReady();
+  const rows = await db
     .select({
       id: categories.id,
       slug: categories.slug,
@@ -19,5 +21,5 @@ categoriesRouter.get('/', async (_req, res) => {
     .orderBy(asc(categories.name))
     .all();
 
-  res.json(rows);
-});
+  return NextResponse.json(rows);
+}

@@ -1,78 +1,76 @@
 # das-shop
 
-Multi-platform shopping app: Web (Next.js) + Android (Kotlin Compose) + REST API (Node/Express + Prisma).
+Multi-platform shopping app: **Web + API** (single Next.js app on Vercel) + **Android** (Kotlin Compose).
 
 ## Architecture
 
 ```
 das-shop/
 ├── apps/
-│   ├── web/        Next.js 15 + TypeScript + Tailwind + shadcn-style UI
-│   ├── api/        Node.js + Express + Drizzle ORM + SQLite + JWT auth
+│   ├── web/        Next.js 15 — pages + /api route handlers + libSQL DB
+│   │   └── src/
+│   │       ├── app/             Pages (home, catalog, cart, login, orders, search)
+│   │       │   └── api/         Route handlers (products, categories, auth, cart, orders)
+│   │       ├── components/      UI primitives
+│   │       ├── lib/             Browser-side helpers (API client, stores)
+│   │       └── server/          Server-only code (DB, auth, init/seed)
 │   └── android/    Kotlin + Jetpack Compose + Material 3 + Retrofit + Hilt
 └── packages/
-    └── shared-types/   TypeScript types reused by web & potentially edge functions
+    └── shared-types/   Reserved for shared TS types if needed
 ```
 
-## Quick start (local dev)
+One backend, one frontend, one deploy. The Android app hits the same `/api/*` routes as the browser.
 
-Prerequisites: Node 20+, npm 10+. Android requires Android Studio Hedgehog+ and JDK 17+.
+## Deploy to production
 
-### 1. Install deps
+→ See [DEPLOY.md](./DEPLOY.md) — one-click Vercel button + Turso DB setup, ~3 minutes total.
+
+## Local development
+
+Prerequisites: Node 20+, npm 10+.
 
 ```bash
 cd das-shop
 npm install
-```
-
-### 2. Initialize DB and seed catalogue
-
-```bash
-npm run --workspace apps/api db:setup
-```
-
-This applies the schema to a local SQLite file (`apps/api/dev.db`) and inserts demo products + categories + an admin user.
-
-### 3. Run API + Web together
-
-```bash
 npm run dev
 ```
 
-- API: http://localhost:4000
-- Web: http://localhost:3000
+Open http://localhost:3000 — schema + seed run automatically on first request.
 
-API health check: http://localhost:4000/health
+The local DB is a SQLite file at `apps/web/dev.db`. No env vars required for local dev.
 
-### 4. Android app
-
-Open `apps/android` in Android Studio. The API base URL points to `http://10.0.2.2:4000` (Android emulator's loopback to host). Build & run on emulator or device.
-
-## Default admin
+### Default admin
 
 ```
 email: admin@das-shop.local
 password: admin1234
 ```
 
+## Android
+
+Open `apps/android` in Android Studio Hedgehog or newer. The app's `API_BASE_URL` defaults to `http://10.0.2.2:3000/api/` (the emulator's loopback to your dev host). For a physical device or production, override it in `app/build.gradle.kts`.
+
+The debug APK is built automatically by CI on every push that touches `apps/android/**` — see the [Actions tab](https://github.com/Massi93/ghosts-brigad/actions) for the `das-shop-debug-apk` artifact.
+
 ## Tech choices (why)
 
-- **Next.js App Router** — SSR/SSG for SEO (critical in e-commerce), image optimization, server actions for forms.
-- **Drizzle ORM + SQLite (dev) / Postgres (prod)** — type-safe TypeScript-first ORM, zero engine binary downloads, swap driver to scale up.
-- **JWT** — stateless auth; same token usable by web and Android.
-- **Jetpack Compose + Material 3** — Google's recommended modern Android stack; matches what production retail apps now ship.
-- **Retrofit + Kotlin coroutines + Hilt** — industry standard for Android networking + DI.
-- **Tailwind + shadcn-style components** — fast iteration, no vendor lock-in (we own the component source).
+- **Single Next.js app** for web + API — one deploy, one origin, no CORS, server components can hit the DB directly.
+- **Drizzle ORM + libSQL** — type-safe TypeScript-first ORM, SQLite locally, hosted libSQL (Turso) in production, identical SQL.
+- **JWT auth** — stateless, same token works for web fetch and Android Retrofit.
+- **Jetpack Compose + Material 3** — Google's current recommended Android stack.
+- **Retrofit + Kotlin coroutines + Hilt** — industry-standard Android networking + DI.
+- **Tailwind + custom components** — fast iteration, we own the source, no vendor lock-in.
 
 ## Roadmap
 
 - [x] Product catalog, categories, search, filters
 - [x] User auth (email + password, JWT)
 - [x] Cart (per-user, server-side)
-- [ ] Stripe checkout
-- [ ] Order history
+- [x] Checkout (creates order from cart)
+- [x] Order history
+- [ ] Stripe payment intent on checkout
 - [ ] Wishlist
 - [ ] Admin dashboard (product CRUD)
-- [ ] Push notifications
+- [ ] Push notifications (FCM)
 - [ ] Reviews & ratings
 - [ ] Recommendation engine

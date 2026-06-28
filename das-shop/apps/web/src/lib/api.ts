@@ -1,4 +1,9 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+function resolveBaseUrl(): string {
+  if (typeof window !== 'undefined') return '';
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return `http://localhost:${process.env.PORT ?? 3000}`;
+}
 
 export interface Category {
   id: string;
@@ -63,7 +68,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   const headers = new Headers(init.headers);
   headers.set('content-type', 'application/json');
   if (token) headers.set('authorization', `Bearer ${token}`);
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers, cache: 'no-store' });
+  const res = await fetch(`${resolveBaseUrl()}${path}`, { ...init, headers, cache: 'no-store' });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `request_failed_${res.status}`);
@@ -77,23 +82,23 @@ export const api = {
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== '') q.set(k, String(v));
     });
-    return request<ProductList>(`/products?${q.toString()}`);
+    return request<ProductList>(`/api/products?${q.toString()}`);
   },
-  getProduct: (slug: string) => request<Product>(`/products/${slug}`),
-  listCategories: () => request<Category[]>('/categories'),
+  getProduct: (slug: string) => request<Product>(`/api/products/${slug}`),
+  listCategories: () => request<Category[]>('/api/categories'),
   register: (data: { email: string; password: string; name?: string }) =>
-    request<{ user: AuthUser; token: string }>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    request<{ user: AuthUser; token: string }>('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   login: (data: { email: string; password: string }) =>
-    request<{ user: AuthUser; token: string }>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-  me: (token: string) => request<AuthUser>('/auth/me', {}, token),
-  getCart: (token: string) => request<Cart>('/cart', {}, token),
+    request<{ user: AuthUser; token: string }>('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  me: (token: string) => request<AuthUser>('/api/auth/me', {}, token),
+  getCart: (token: string) => request<Cart>('/api/cart', {}, token),
   addToCart: (token: string, data: { productId: string; quantity?: number; size?: string }) =>
-    request<Cart>('/cart/items', { method: 'POST', body: JSON.stringify(data) }, token),
+    request<Cart>('/api/cart/items', { method: 'POST', body: JSON.stringify(data) }, token),
   updateCartItem: (token: string, id: string, quantity: number) =>
-    request<Cart>(`/cart/items/${id}`, { method: 'PATCH', body: JSON.stringify({ quantity }) }, token),
+    request<Cart>(`/api/cart/items/${id}`, { method: 'PATCH', body: JSON.stringify({ quantity }) }, token),
   removeCartItem: (token: string, id: string) =>
-    request<Cart>(`/cart/items/${id}`, { method: 'DELETE' }, token),
-  checkout: (token: string) => request<unknown>('/orders/checkout', { method: 'POST' }, token),
+    request<Cart>(`/api/cart/items/${id}`, { method: 'DELETE' }, token),
+  checkout: (token: string) => request<unknown>('/api/orders/checkout', { method: 'POST' }, token),
 };
 
 export function formatPrice(cents: number, currency = 'EUR'): string {

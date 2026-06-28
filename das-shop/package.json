@@ -2,21 +2,14 @@
   "name": "das-shop",
   "private": true,
   "version": "0.1.0",
-  "description": "das-shop — multi-platform shopping (Web + Android + API)",
+  "description": "das-shop — multi-platform shopping (Web + Android, single Next.js + libSQL backend)",
   "workspaces": [
     "apps/web",
-    "apps/api",
     "packages/*"
   ],
   "scripts": {
-    "dev:api": "npm --workspace apps/api run dev",
-    "dev:web": "npm --workspace apps/web run dev",
-    "dev": "concurrently -n api,web -c blue,green \"npm run dev:api\" \"npm run dev:web\"",
-    "build:web": "npm --workspace apps/web run build",
-    "build:api": "npm --workspace apps/api run build",
-    "seed": "npm --workspace apps/api run seed"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.0"
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "start": "npm --workspace apps/web run start"
   }
 }

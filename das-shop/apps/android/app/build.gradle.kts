@@ -18,9 +18,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        // 10.0.2.2 is the host machine from inside the standard Android emulator.
-        // For a physical device, set API_BASE_URL via a buildConfigField override or a debug variant.
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:4000/\"")
+        // Local dev: 10.0.2.2 is the host machine from inside the standard Android emulator.
+        // Production: override with your Vercel URL, e.g. "https://das-shop-xxx.vercel.app/api/".
+        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/api/\"")
     }
 
     buildTypes {

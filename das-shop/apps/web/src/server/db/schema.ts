@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
-import { createId } from '../lib/id.js';
+import { createId } from '../lib/id';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey().$defaultFn(() => createId()),
