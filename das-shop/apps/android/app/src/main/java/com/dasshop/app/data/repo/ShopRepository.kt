@@ -27,7 +27,8 @@ class ShopRepository @Inject constructor(
         search: String? = null,
         sort: String = "newest",
         featured: Boolean? = null,
-    ): ProductList = api.listProducts(category, search, sort, featured)
+        limit: Int = 24,
+    ): ProductList = api.listProducts(category, search, sort, featured, limit)
 
     suspend fun getProduct(slug: String): Product = api.getProduct(slug)
 

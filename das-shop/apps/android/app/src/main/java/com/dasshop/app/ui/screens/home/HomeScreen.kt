@@ -12,7 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.items as rowItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -107,7 +108,7 @@ fun HomeScreen(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(state.categories) { c ->
+                rowItems(state.categories) { c ->
                     Surface(
                         onClick = { onCategoryClick(c.slug) },
                         color = MaterialTheme.colorScheme.surface,
@@ -141,7 +142,7 @@ fun HomeScreen(
                 modifier = Modifier.height((((state.featured.size + 1) / 2) * 380).dp),
                 userScrollEnabled = false,
             ) {
-                items(state.featured) { product ->
+                gridItems(state.featured) { product ->
                     ProductCard(product = product, onClick = { onProductClick(product.slug) })
                 }
             }
