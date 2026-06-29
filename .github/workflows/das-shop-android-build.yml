@@ -11,6 +11,9 @@ on:
       - ".github/workflows/das-shop-android-build.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-debug-apk:
     name: Build debug APK
@@ -45,18 +48,34 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Locate APK
-        id: locate
+      - name: Rename APK
         run: |
-          APK=$(find app/build/outputs/apk/debug -name "*.apk" | head -1)
-          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
-          echo "Built: $APK"
-          ls -la "$APK"
+          mkdir -p ../../../dist
+          cp app/build/outputs/apk/debug/app-debug.apk ../../../dist/das-shop-debug.apk
+          ls -la ../../../dist/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: das-shop-debug-apk
-          path: das-shop/apps/android/app/build/outputs/apk/debug/*.apk
+          path: dist/das-shop-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish APK to GitHub Release (public download)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/das-shop-android-web-setup-kgqkgr'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: das-shop-debug-latest
+          name: das-shop debug APK (latest)
+          body: |
+            Debug APK built automatically from the latest commit on the das-shop branch.
+
+            **Direct download URL** (no login required):
+            https://github.com/Massi93/ghosts-brigad/releases/download/das-shop-debug-latest/das-shop-debug.apk
+
+            Built from commit ${{ github.sha }}.
+          files: dist/das-shop-debug.apk
+          draft: false
+          prerelease: true
+          make_latest: false
