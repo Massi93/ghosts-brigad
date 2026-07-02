@@ -29,7 +29,11 @@ rss:
   feeds:
     - "https://www.forexlive.com/feed/news"
     - "https://www.fxstreet.com/rss/news"
+    # Crypto (BTCUSD)
     - "https://cointelegraph.com/rss"
+    - "https://www.coindesk.com/arc/outboundfeeds/rss/"
+    # Or / métaux précieux (XAUUSD)
+    - "https://www.kitco.com/rss/category/commodities"
   lookback_minutes: 180
 
 calendar:
@@ -53,9 +57,20 @@ symbols:
   USDJPY:
     keywords: ["usdjpy", "usd/jpy", "dollar yen", "dxy"]
     inverse_keywords: ["yen", "boj ", "bank of japan"]
+  # --- OR : le sentiment or est piloté par le dollar, les taux réels,
+  #     l'aversion au risque et les achats des banques centrales
   XAUUSD:
-    keywords: ["xauusd", "gold", "xau "]
-    inverse_keywords: ["dollar", "dxy", "real yields"]
+    keywords: ["xauusd", "gold", "xau ", "bullion", "precious metal",
+               "safe haven", "safe-haven", "gold etf", "central bank buying",
+               "geopolitical", "spot gold", "comex"]
+    inverse_keywords: ["dollar", "dxy", "real yields", "treasury yields",
+                       "rate hike", "hawkish fed", "strong jobs report"]
+  # --- BITCOIN : sentiment très sensible aux flux ETF, décisions SEC,
+  #     achats institutionnels et liquidations. Cote 24h/7j.
   BTCUSD:
-    keywords: ["btc", "bitcoin", "btcusd"]
-    inverse_keywords: []
+    keywords: ["btc", "bitcoin", "btcusd", "crypto", "etf inflow",
+               "etf outflow", "halving", "blackrock", "microstrategy",
+               "whale", "on-chain", "sec approval", "spot etf",
+               "accumulation", "mining difficulty"]
+    inverse_keywords: ["risk-off", "crypto crackdown", "exchange hack",
+                       "sec lawsuit", "crypto ban", "liquidation cascade"]

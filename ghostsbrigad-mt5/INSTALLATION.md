@@ -87,6 +87,53 @@ python -m sentinel
 
 ---
 
+## 🥇🪙 Trader XAUUSD (or) et BTCUSD (Bitcoin)
+
+Deux presets dédiés sont fournis dans `presets/` :
+
+| Fichier | Instrument | Points clés |
+|---|---|---|
+| `GhostsBrigad_XAUUSD_M5_Scalping.set` | Or | Heures 10h–20h (Londres+NY), SL/TP ATR élargis (2.0×/3.0×), fermeture avant les news à fort impact activée, magic 202402 |
+| `GhostsBrigad_BTCUSD_M5_Scalping.set` | Bitcoin | 24h/7j (filtre horaire OFF, pas de fermeture vendredi), risque réduit à 0.5 %, 1 position max, seuils en pips adaptés à l'échelle BTC, magic 202403 |
+
+### ⚠️ L'échelle des « pips » n'est pas la même !
+
+Le bot compte en « pips » = 10 points du symbole :
+
+| Symbole | 1 pip du bot vaut | Spread typique Exness | ATR M5 typique |
+|---|---|---|---|
+| EURUSD | 0.0001 | ~1 pip | 3–8 pips |
+| XAUUSD | 0.10 $/oz | ~2–3 pips | 15–30 pips |
+| BTCUSD | 0.10 $ | ~150–250 pips | 1500–4000 pips |
+
+C'est pour ça que le preset BTC a des valeurs comme `InpMaxSpreadPips=300` :
+c'est normal, ne les « corrige » pas à la baisse sinon le bot ne tradera
+jamais. Le mode **ATR** (activé dans les deux presets) adapte automatiquement
+SL/TP à la volatilité du moment — c'est lui qui fait le vrai travail.
+
+### Conseils spécifiques
+
+- **Or** : très sensible au dollar et aux annonces Fed. Garde
+  `InpCloseBeforeNews=true` (activé dans le preset) — un NFP peut faire
+  bouger l'or de 20 $ en une minute.
+- **Bitcoin** : volatilité extrême le week-end avec liquidité réduite ;
+  le preset limite à 1 position et 0.5 % de risque. Si tu veux éviter
+  les week-ends, remets `InpUseTimeFilter=true` + `InpNoTradeOnFriday=true`.
+- **Suffixes de symboles** : sur certains comptes Exness les symboles
+  s'appellent `XAUUSDm` ou `BTCUSDm`. Dans ce cas, adapte aussi les clés
+  de la section `symbols:` du `config.yaml` de Sentinel pour qu'elles
+  correspondent exactement.
+- **Vérifie la ligne de coûts** au démarrage de l'EA (onglet Experts) :
+  elle affiche le spread + commission réels de TON compte sur le symbole.
+  Si le coût total dépasse `InpMaxTotalCostPips`, le bot attendra des
+  conditions meilleures — c'est voulu.
+- Le fichier de sentiment (`sentinel/config.example.yaml`) inclut des
+  mots-clés spécialisés or (safe haven, taux réels, banques centrales…)
+  et crypto (flux ETF, SEC, halving, liquidations…) plus les flux RSS
+  Kitco (or) et CoinDesk (crypto).
+
+---
+
 ## ⚠️ Ordre de mise en route conseillé
 
 1. **Backtest** (étape 5) — gratuit, sans risque
