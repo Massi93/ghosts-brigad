@@ -17,6 +17,7 @@
 #include "Exit/ExitManager.mqh"
 #include "Filters/ScalpFilters.mqh"
 #include "Analysis/Confluence.mqh"
+#include "Utils/Notifier.mqh"
 
 //--- Include strategies
 #include "Strategies/EMA_Scalping.mqh"
@@ -108,6 +109,14 @@ input bool   InpConfVolProfile   = true;   // Volume Profile (POC/VA)
 input bool   InpConfOrderFlow    = true;   // Order Flow (tick-volume delta)
 input bool   InpConfElliott      = false;  // Elliott Wave (experimental)
 input bool   InpConfGann         = false;  // Gann 1x1 (experimental)
+
+//--- Notifications (MT5 mobile app + Telegram)
+input group "=== NOTIFICATIONS ==="
+input bool   InpNotifyPush     = false;  // Push -> App Mobile MT5 (MetaQuotes ID)
+input string InpTgToken        = "";     // Telegram Bot Token (via @BotFather)
+input string InpTgChatID       = "";     // Telegram Chat ID
+input bool   InpNotifyTrades   = true;   // Notifier Ouvertures/Fermetures
+input bool   InpNotifyProtect  = true;   // Notifier Protections (limite perte, DD)
 
 //--- Smart Exits
 input group "=== SMART EXITS ==="
@@ -278,6 +287,12 @@ int OnInit()
          " | Sentinel: ", (InpUseSentinel ? "ON" : "OFF"),
          " | Confluence: ", (InpUseConfluence ? "ON" : "OFF"));
 
+   // Notifications sortantes (app mobile MT5 / Telegram)
+   Notifier_Init(InpNotifyPush, InpTgToken, InpTgChatID);
+   if(InpNotifyPush || StringLen(InpTgToken) > 0)
+      Notify("GhostsBrigad demarre sur " + gSymbol + " | " +
+             Cost_Summary(gSymbol, gCostProfile));
+
    return INIT_SUCCEEDED;
 }
 
@@ -318,7 +333,15 @@ void OnTick()
    if(IsDailyLossLimitReached(InpDailyLossLimit))
    {
       static bool warned = false;
-      if(!warned) { Print("Daily loss limit reached. No new trades."); warned = true; }
+      if(!warned)
+      {
+         warned = true;
+         if(InpNotifyProtect)
+            Notify("PROTECTION: limite de perte journaliere atteinte sur "
+                   + gSymbol + ". Plus de nouveaux trades aujourd'hui.");
+         else
+            Print("Daily loss limit reached. No new trades.");
+      }
       ManageOpenPositions();
       return;
    }
@@ -326,7 +349,15 @@ void OnTick()
    if(IsMaxDrawdownReached(InpMaxDrawdown))
    {
       static bool warnedDD = false;
-      if(!warnedDD) { Print("Max drawdown reached. Closing all positions."); warnedDD = true; }
+      if(!warnedDD)
+      {
+         warnedDD = true;
+         if(InpNotifyProtect)
+            Notify("PROTECTION: drawdown maximum atteint sur " + gSymbol +
+                   ". Toutes les positions fermees, bot en pause.");
+         else
+            Print("Max drawdown reached. Closing all positions.");
+      }
       CloseAllPositions(gSymbol, InpMagicNumber);
       gTradingEnabled = false;
       return;
@@ -480,9 +511,15 @@ void OnTick()
       result = Trade.Sell(lot, gSymbol, 0, sl, tp, InpTradeComment);
 
    if(result)
+   {
       Print("Trade opened | ", EnumToString(orderType), " | Lot: ", lot,
             " | SL: ", sl, " | TP: ", tp,
             " | Signal: ", EnumToString(InpStrategy));
+      if(InpNotifyTrades)
+         Notify(StringFormat("%s %s %.2f lot @ %.2f | SL %.2f | TP %.2f",
+                (orderType == ORDER_TYPE_BUY ? "ACHAT" : "VENTE"),
+                gSymbol, lot, SymbolInfoDouble(gSymbol, SYMBOL_BID), sl, tp));
+   }
    else
       Print("Trade failed | Error: ", Trade.ResultRetcode(), " | ", Trade.ResultRetcodeDescription());
 
@@ -723,6 +760,9 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
                Print("Deal closed | Symbol: ", symbol,
                      " | Profit: ", DoubleToString(profit, 2),
                      " | Magic: ", magic);
+               if(InpNotifyTrades)
+                  Notify(StringFormat("FERME %s : %+.2f USD | Solde %.2f",
+                         symbol, profit, AccountInfoDouble(ACCOUNT_BALANCE)));
                // Drop per-ticket exit-manager state once fully closed
                ulong posId = (ulong)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
                if(!PositionSelectByTicket(posId))

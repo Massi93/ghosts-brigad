@@ -134,6 +134,55 @@ SL/TP à la volatilité du moment — c'est lui qui fait le vrai travail.
 
 ---
 
+## 🎛️ Contrôler et communiquer avec le bot
+
+### Surveiller ce qu'il fait (en direct)
+
+- **Onglet Experts** (bas de MT5, Ctrl+T) : le journal de bord du bot.
+  Chaque décision y est expliquée — coûts au démarrage, signaux, vetos
+  de confluence (`Confluence 42 (5 methodes) Dow:+80 SMC:+55...`),
+  vetos de sentiment, trades refusés pour frais, ouvertures/fermetures.
+- **Onglet Trade** : les positions ouvertes (magic 202402 = or,
+  202403 = BTC). **Onglet Historique** : les trades fermés.
+
+### Le contrôler
+
+| Action | Comment |
+|---|---|
+| ⏸️ Tout mettre en pause | Bouton **Algo Trading** de la barre d'outils (rouge = stop). Les positions restent gérées à la reprise |
+| ⚙️ Changer un réglage | Clic droit sur le graphique → **Liste des Experts** → sélectionner → **Propriétés** (F7) |
+| 🛑 Fermeture d'urgence | Glisser le script **GhostsBrigad_CloseAll** sur le graphique (Magic 0 = tout fermer) |
+| ❌ Retirer le bot | Clic droit sur le graphique → Liste des Experts → **Supprimer** |
+| 🚫 Bloquer avant une annonce | Rien à faire : blackout automatique si Sentinel tourne |
+
+### Recevoir ses messages sur ton téléphone 📱
+
+Le bot envoie maintenant : démarrage, chaque ouverture (`ACHAT XAUUSD
+0.10 lot @ 3305.20 | SL... | TP...`), chaque fermeture (`FERME XAUUSD :
++42.50 USD | Solde 10542.50`), et les protections (limite de perte
+journalière, drawdown max).
+
+**Option A — App mobile MT5 (le plus simple)** :
+1. Installe l'app MetaTrader 5 (iOS/Android) → Paramètres → Chat et
+   Messages → note ton **MetaQuotes ID** (8 caractères)
+2. Sur le PC : **Outils → Options → Notifications** → coche Activer,
+   colle ton MetaQuotes ID
+3. Dans l'EA : `InpNotifyPush = true`
+
+**Option B — Telegram** :
+1. Dans Telegram, parle à **@BotFather** → `/newbot` → note le **token**
+2. Parle à **@userinfobot** → note ton **chat id**
+3. MT5 : **Outils → Options → Expert Advisors** → coche « Autoriser
+   WebRequest pour les URL listées » → ajoute `https://api.telegram.org`
+4. Dans l'EA : `InpTgToken` = le token, `InpTgChatID` = ton chat id
+
+⚠️ **Important** : le bot vit dans le terminal MT5 de ton **PC**. Si le
+PC s'éteint ou MT5 se ferme, le bot s'arrête (les SL/TP des positions
+restent actifs côté serveur Exness). L'app mobile permet de **voir** et
+**fermer** les positions à la main, pas de faire tourner le bot. Pour
+un fonctionnement 24h/24, utilise un **VPS** (Exness en offre un
+gratuit sous conditions, sinon ~5 $/mois).
+
 ## ⚠️ Ordre de mise en route conseillé
 
 1. **Backtest** (étape 5) — gratuit, sans risque
