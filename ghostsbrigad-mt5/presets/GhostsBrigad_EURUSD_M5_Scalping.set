@@ -1,4 +1,6 @@
 ; GhostsBrigad EA v2.0 - Preset scalping EURUSD M5
+; ATTENTION - NON VALIDE : resultats incoherents (2025-26 : -5.1% ; 2024-25 : +4.4%).
+; Aucun avantage demontre sur EURUSD. Preset fourni pour experimentation seulement.
 ; Charger via : onglet "Parametres d'entree" de l'EA -> Charger
 ; InpAccountType=0 (auto) : mets 1=Standard 2=Cent 3=Pro 4=Raw 5=Zero selon ton compte
 InpStrategy=5
