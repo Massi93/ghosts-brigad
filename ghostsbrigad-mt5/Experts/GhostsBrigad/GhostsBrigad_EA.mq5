@@ -16,6 +16,7 @@
 #include "News/NewsSentiment.mqh"
 #include "Exit/ExitManager.mqh"
 #include "Filters/ScalpFilters.mqh"
+#include "Analysis/Confluence.mqh"
 
 //--- Include strategies
 #include "Strategies/EMA_Scalping.mqh"
@@ -91,6 +92,22 @@ input int    InpCooldownMinutes  = 120;    // Cooldown Duration (minutes)
 input int    InpMaxTradesPerDay  = 10;     // Max Trades Per Day (0 = off)
 input int    InpMinBarsBetween   = 3;      // Min Bars Between Entries
 input bool   InpUseAdaptiveRisk  = true;   // Adaptive Risk (anti-martingale)
+
+//--- Advanced Analysis (confluence of institutional methods)
+input group "=== ANALYSE AVANCEE (CONFLUENCE) ==="
+input bool   InpUseConfluence    = true;   // Enable Confluence Gate
+input double InpConfluenceMin    = 20.0;   // Min Score to Confirm Signal (0-100)
+input int    InpConfluenceMinN   = 2;      // Min Methods With an Opinion
+input bool   InpConfDow          = true;   // Dow Theory (market structure)
+input bool   InpConfPriceAction  = true;   // Price Action (pin/engulfing/inside)
+input bool   InpConfFibonacci    = true;   // Fibonacci Retracement
+input bool   InpConfWyckoff      = true;   // Wyckoff (spring/upthrust)
+input bool   InpConfSMC          = true;   // Smart Money Concepts
+input bool   InpConfVWAP         = true;   // VWAP (session)
+input bool   InpConfVolProfile   = true;   // Volume Profile (POC/VA)
+input bool   InpConfOrderFlow    = true;   // Order Flow (tick-volume delta)
+input bool   InpConfElliott      = false;  // Elliott Wave (experimental)
+input bool   InpConfGann         = false;  // Gann 1x1 (experimental)
 
 //--- Smart Exits
 input group "=== SMART EXITS ==="
@@ -202,6 +219,7 @@ string             gSymbol;
 bool               gTradingEnabled = true;
 AccountCostProfile gCostProfile;
 ExitParams         gExitParams;
+ConfluenceConfig   gConfluence;
 
 //==================================================================
 //  EA INITIALIZATION
@@ -242,10 +260,23 @@ int OnInit()
    gExitParams.closeBeforeNews     = InpUseSentinel && InpCloseBeforeNews;
    gExitParams.newsPreMinutes      = InpBlackoutPreMin;
 
+   // Confluence engine configuration
+   gConfluence.useDow         = InpConfDow;
+   gConfluence.usePriceAction = InpConfPriceAction;
+   gConfluence.useFibonacci   = InpConfFibonacci;
+   gConfluence.useWyckoff     = InpConfWyckoff;
+   gConfluence.useSMC         = InpConfSMC;
+   gConfluence.useVWAP        = InpConfVWAP;
+   gConfluence.useVolProfile  = InpConfVolProfile;
+   gConfluence.useOrderFlow   = InpConfOrderFlow;
+   gConfluence.useElliott     = InpConfElliott;
+   gConfluence.useGann        = InpConfGann;
+
    Print("GhostsBrigad EA v2.0 initialized | Symbol: ", gSymbol,
          " | Strategy: ", EnumToString(InpStrategy),
          " | Magic: ", InpMagicNumber,
-         " | Sentinel: ", (InpUseSentinel ? "ON" : "OFF"));
+         " | Sentinel: ", (InpUseSentinel ? "ON" : "OFF"),
+         " | Confluence: ", (InpUseConfluence ? "ON" : "OFF"));
 
    return INIT_SUCCEEDED;
 }
@@ -371,6 +402,23 @@ void OnTick()
       Print("Trade vetoed by sentiment | Direction: ", signal);
       ManageOpenPositions();
       return;
+   }
+
+   // Confluence gate: the institutional-analysis methods (Dow, Price
+   // Action, Fibonacci, Wyckoff, SMC, VWAP, Volume Profile, Order
+   // Flow...) must agree with the signal direction.
+   if(InpUseConfluence)
+   {
+      string confLog;
+      if(!Confluence_AllowTrade(gSymbol, InpTimeframe, gConfluence,
+                                signal, InpConfluenceMin,
+                                InpConfluenceMinN, confLog))
+      {
+         Print("Trade vetoed by confluence | Direction: ", signal, " | ", confLog);
+         ManageOpenPositions();
+         return;
+      }
+      Print("Confluence confirms | Direction: ", signal, " | ", confLog);
    }
 
    // Calculate SL/TP

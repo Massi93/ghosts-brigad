@@ -45,22 +45,23 @@ jobs:
       - name: Installer les dependances
         run: pip install -r requirements.txt
 
-      - name: Backtest configs finales, en et hors echantillon
+      - name: Backtest configs finales avec/sans confluence, 2 periodes
         run: |
-          # Configs des presets livres, testees sur la periode de reglage
-          # (START-END) ET sur la periode precedente jamais vue (out-of-
-          # sample) pour detecter le sur-ajustement.
+          # Chaque config testee sur la periode de reglage ET sur la
+          # periode jamais vue (out-of-sample), avec et sans la porte
+          # de confluence (Dow, Fibonacci, VWAP, SMC, order flow).
           for period in "$START $END" "2024-07-01 2025-06-30"; do
             set -- $period
             P_START=$1; P_END=$2
-            for combo in "XAUUSD 5 standard none" "XAUUSD 5 raw none" \
-                         "BTCUSD 15 standard all" "BTCUSD 15 raw all" \
-                         "EURUSD 5 standard all"; do
+            for combo in "XAUUSD 5 standard none off" \
+                         "XAUUSD 5 standard none on" \
+                         "BTCUSD 15 standard all off" \
+                         "BTCUSD 15 standard all on"; do
               set -- $combo
-              echo "::group::$1 M$2 / $3 / filtres=$4 / $P_START -> $P_END"
+              echo "::group::$1 M$2 / $3 / filtres=$4 / confluence=$5 / $P_START"
               python ghostsbrigad_backtest.py \
                 --symbol "$1" --tf "$2" --account "$3" --filters "$4" \
-                --start "$P_START" --end "$P_END" \
+                --confluence "$5" --start "$P_START" --end "$P_END" \
                 | tee -a "$GITHUB_STEP_SUMMARY"
               echo "::endgroup::"
             done

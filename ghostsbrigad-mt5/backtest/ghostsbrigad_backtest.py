@@ -172,8 +172,10 @@ def resample(m1: pd.DataFrame, rule: str) -> pd.DataFrame:
     h = m1["high"].resample(rule).max()
     l = m1["low"].resample(rule).min()
     c = m1["close"].resample(rule).last()
-    out = pd.DataFrame({"open": o, "high": h, "low": l, "close": c}).dropna()
-    return out
+    out = pd.DataFrame({"open": o, "high": h, "low": l, "close": c})
+    if "volume" in m1.columns:
+        out["volume"] = m1["volume"].resample(rule).sum()
+    return out.dropna()
 
 
 # ----------------------------------------------------------------------
@@ -273,6 +275,105 @@ def combo_signals(m5: pd.DataFrame, p: dict) -> pd.Series:
 
 
 # ----------------------------------------------------------------------
+# Confluence engine (mirrors Analysis/*.mqh: Dow, Fibonacci, VWAP,
+# SMC fair-value-gaps & liquidity sweeps, order-flow delta)
+# ----------------------------------------------------------------------
+def _last_and_prev(vals: pd.Series, mask: pd.Series):
+    """Latest and previous swing values, causally shifted 2 bars
+    (a 2-2 fractal is only confirmed 2 bars after its extreme)."""
+    at = vals.where(mask)
+    last = at.ffill().shift(2)
+    prev = at.dropna().shift(1).reindex(vals.index).ffill().shift(2)
+    return last, prev
+
+
+def confluence_scores(df: pd.DataFrame, threshold: float = 20.0,
+                      min_methods: int = 2) -> pd.Series:
+    """Per-bar confluence score in [-100, 100]; NaN-free."""
+    h, l, c, o = df["high"], df["low"], df["close"], df["open"]
+    v = df["volume"] if "volume" in df.columns else pd.Series(1.0, index=df.index)
+
+    fh = (h > h.shift(1)) & (h > h.shift(2)) & (h > h.shift(-1)) & (h > h.shift(-2))
+    fl = (l < l.shift(1)) & (l < l.shift(2)) & (l < l.shift(-1)) & (l < l.shift(-2))
+    idx = pd.Series(np.arange(len(df), dtype=float), index=df.index)
+    sh1, sh2 = _last_and_prev(h, fh)
+    sl1, sl2 = _last_and_prev(l, fl)
+    ih1, _ = _last_and_prev(idx, fh)
+    il1, _ = _last_and_prev(idx, fl)
+
+    parts = []
+
+    # --- Dow Theory: HH+HL / LL+LH structure
+    hh, hl = sh1 > sh2, sl1 > sl2
+    ll, lh = sl1 < sl2, sh1 < sh2
+    dow = np.select(
+        [hh & hl, ll & lh, hh | hl, ll | lh],
+        [80.0, -80.0, 30.0, -30.0], 0.0)
+    parts.append(pd.Series(dow, index=df.index))
+
+    # --- Fibonacci: retracement of the freshest leg
+    up_leg = ih1 > il1          # low then high = bullish impulse
+    leg_hi, leg_lo = sh1, sl1
+    span = (leg_hi - leg_lo).replace(0, np.nan)
+    retr_up = (leg_hi - c) / span          # for bullish legs
+    retr_dn = (c - leg_lo) / span          # for bearish legs
+    retr = np.where(up_leg, retr_up, retr_dn)
+    fib_mag = np.select(
+        [(retr >= 0.50) & (retr <= 0.65),
+         (retr >= 0.35) & (retr < 0.50),
+         (retr > 0.65) & (retr <= 0.79)],
+        [70.0, 40.0, 25.0], 0.0)
+    fib = np.where(np.isnan(retr), 0.0,
+                   np.where(up_leg, fib_mag, -fib_mag))
+    parts.append(pd.Series(fib, index=df.index))
+
+    # --- VWAP (session): z-score of price vs daily VWAP
+    tp = (h + l + c) / 3
+    day = df.index.date
+    cpv = (tp * v).groupby(day).cumsum()
+    cv = v.groupby(day).cumsum().replace(0, np.nan)
+    cp2v = (tp * tp * v).groupby(day).cumsum()
+    vwap = cpv / cv
+    sigma = np.sqrt((cp2v / cv - vwap**2).clip(lower=0)).replace(0, np.nan)
+    z = ((c - vwap) / sigma)
+    vw = np.select(
+        [z > 2.5, z < -2.5, z > 0.3, z < -0.3],
+        [-25.0, 25.0, np.minimum(60, z * 30), np.maximum(-60, z * 30)], 0.0)
+    parts.append(pd.Series(np.where(np.isnan(z), 0.0, vw), index=df.index))
+
+    # --- SMC fair value gaps: price back inside a recent imbalance
+    bull_gap = l > h.shift(2)
+    bear_gap = h < l.shift(2)
+    b_lo = h.shift(2).where(bull_gap).ffill(limit=20)
+    b_hi = l.where(bull_gap).ffill(limit=20)
+    s_lo = h.where(bear_gap).ffill(limit=20)
+    s_hi = l.shift(2).where(bear_gap).ffill(limit=20)
+    fvg = np.where((c >= b_lo) & (c <= b_hi), 50.0,
+                   np.where((c >= s_lo) & (c <= s_hi), -50.0, 0.0))
+    parts.append(pd.Series(np.where(np.isnan(fvg), 0, fvg), index=df.index))
+
+    # --- SMC liquidity sweep: pierce a swing extreme, close back inside
+    sweep = np.where((h > sh1) & (c < sh1), -65.0,
+                     np.where((l < sl1) & (c > sl1), 65.0, 0.0))
+    parts.append(pd.Series(np.where(np.isnan(sweep), 0, sweep), index=df.index))
+
+    # --- Order flow: normalized cumulative delta over 20 bars
+    rng = (h - l).replace(0, np.nan)
+    pressure = ((c - o) / rng * v).fillna(0)
+    norm = pressure.rolling(20).sum() / v.rolling(20).sum().replace(0, np.nan)
+    delta = (norm * 150).clip(-60, 60).fillna(0)
+    parts.append(delta)
+
+    stacked = pd.concat(parts, axis=1)
+    nonzero = (stacked != 0).sum(axis=1)
+    score = stacked.sum(axis=1) / nonzero.replace(0, np.nan)
+    score = score.fillna(0)
+    # fail-open when fewer than min_methods have an opinion
+    score[nonzero < min_methods] = np.nan
+    return score
+
+
+# ----------------------------------------------------------------------
 # Trade engine
 # ----------------------------------------------------------------------
 @dataclass
@@ -304,8 +405,11 @@ class Result:
 
 
 def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str,
-                 filters: dict | None = None) -> Result:
+                 filters: dict | None = None,
+                 confluence: pd.Series | None = None,
+                 conf_threshold: float = 20.0) -> Result:
     f = filters if filters is not None else SCALP_FILTERS
+    conf_v = confluence.values if confluence is not None else None
     pip = p["pip"]
     pip_val = p["pip_value_per_lot"]
     spread = p["spread_pips"][account] * pip
@@ -458,6 +562,13 @@ def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str,
         if direction == -1 and htf_bull_v[i]:
             continue
 
+        # confluence gate (NaN = too few methods -> fail-open)
+        if conf_v is not None and not np.isnan(conf_v[i]):
+            if direction == 1 and conf_v[i] < conf_threshold:
+                continue
+            if direction == -1 and conf_v[i] > -conf_threshold:
+                continue
+
         tp_pips = atr_v[i] * p["atr_tp_mult"] / pip
         if cost_pips > 0 and tp_pips < cost_pips * p["cost_tp_multiple"]:
             continue
@@ -566,6 +677,8 @@ def main():
                     help="all = tous les filtres discipline; safety = "
                          "cooldown + risque adaptatif + plafond/jour "
                          "seulement; none = aucun")
+    ap.add_argument("--confluence", default="off", choices=["on", "off"],
+                    help="porte de confluence (Dow, Fib, VWAP, SMC, delta)")
     ap.add_argument("--start", default=None, help="YYYY-MM-DD (defaut: -12 mois)")
     ap.add_argument("--end", default=None, help="YYYY-MM-DD (defaut: hier)")
     ap.add_argument("--cache", default="data", help="dossier cache donnees")
@@ -597,8 +710,15 @@ def main():
                        max_trades_per_day=0, min_bars_between=0,
                        use_adaptive_risk=False)
 
-    res = run_backtest(bars, h1, PRESETS[args.symbol], args.account, filters)
-    label = f"{args.symbol} M{args.tf} filtres={args.filters}"
+    conf = None
+    if args.confluence == "on":
+        # evaluated on the completed bar, like the signals
+        conf = confluence_scores(bars).shift()
+
+    res = run_backtest(bars, h1, PRESETS[args.symbol], args.account,
+                       filters, confluence=conf)
+    label = (f"{args.symbol} M{args.tf} filtres={args.filters}"
+             f" confluence={args.confluence}")
     report(res, label, args.account, start, end)
 
 
