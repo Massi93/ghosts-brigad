@@ -1,39 +1,29 @@
-# Ce dépôt contient deux projets distincts
+# 🛒 Das Shop (branche `das-shop`)
 
-| Projet | Dossier | Description |
-|---|---|---|
-| 🤖 **Ghosts Brigad MT5** | [`ghostsbrigad-mt5/`](ghostsbrigad-mt5/) | Bot scalping MetaTrader 5 multi-stratégies pour le broker Exness |
-| 💪 **FitFlow** | [`fitflow/`](fitflow/) | App mobile fitness & nutrition (Flutter, iOS + Android) avec coach IA |
+Cette branche contient uniquement le projet **Das Shop** :
+boutique avec app Android + web (Next.js + libSQL, déploiement Vercel).
 
-Chaque dossier est **indépendant** : il a son propre README, ses dépendances et son cycle de build.
-
-## Démarrage rapide par projet
-
-### Ghosts Brigad MT5
+## Démarrage rapide
 
 ```bash
-cd ghostsbrigad-mt5
-# Voir le README pour l'installation des fichiers .mq5 / .mqh dans MetaTrader 5
+cd das-shop
+npm install
+# voir das-shop/README.md et das-shop/DEPLOY.md pour le détail
 ```
 
-→ [Documentation complète](ghostsbrigad-mt5/README.md)
-
-### FitFlow
-
-```bash
-cd fitflow
-flutter create . --platforms=ios,android,web
-flutter pub get
-flutter run
-```
-
-→ [Documentation complète](fitflow/README.md)
-→ [Configuration backend (Firebase, OpenAI, RevenueCat)](fitflow/docs/SETUP.md)
-→ [Publication App Store & Play Store](fitflow/docs/DEPLOYMENT.md)
+→ [Documentation du projet](das-shop/README.md)
+→ [Déploiement](das-shop/DEPLOY.md)
 
 ## CI / CD
 
-Les workflows GitHub Actions à la racine ne ciblent **que FitFlow** pour l'instant :
+- `.github/workflows/das-shop-android-build.yml` — build de l'APK Android
+  et publication en GitHub Release.
 
-- `.github/workflows/fitflow-ci.yml` — `flutter analyze` + `flutter test` à chaque push.
-- `.github/workflows/fitflow-release.yml` — build de l'APK Android et publication en GitHub Release sur tag `v*` ou déclenchement manuel.
+## Les autres projets du dépôt
+
+| Projet | Branche |
+|---|---|
+| 🤖 Bot trading MT5 | `BrigadBot` |
+| 💪 FitFlow (app fitness) | `fitflow` |
+| 🌐 Dani Inmigración (site) | `dani` |
+| 🛒 Das Shop | `das-shop` (cette branche) |
