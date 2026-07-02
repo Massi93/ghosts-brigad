@@ -1,0 +1,61 @@
+# GhostsBrigad Sentinel - configuration
+# Copy to config.yaml and fill in your values.
+
+output:
+  # The EA reads this file from the MT5 COMMON Files folder.
+  # Windows: C:/Users/<you>/AppData/Roaming/MetaQuotes/Terminal/Common/Files/ghostsbrigad_sentinel.txt
+  # Linux (wine): ~/.wine/drive_c/users/<you>/AppData/Roaming/MetaQuotes/Terminal/Common/Files/ghostsbrigad_sentinel.txt
+  file: "C:/Users/YOU/AppData/Roaming/MetaQuotes/Terminal/Common/Files/ghostsbrigad_sentinel.txt"
+
+# How often the whole pipeline runs (seconds)
+refresh_seconds: 300
+
+telegram:
+  enabled: true
+  # Get api_id / api_hash at https://my.telegram.org (API development tools).
+  # First run asks for your phone number + login code, then stores a session.
+  api_id: 123456
+  api_hash: "your_api_hash_here"
+  session: "sentinel"
+  # Public channels/groups to monitor (without the @)
+  channels:
+    - "fxstreetnews"
+    - "financialjuice"
+    - "marketfeed_forex"
+  lookback_minutes: 120
+
+rss:
+  enabled: true
+  feeds:
+    - "https://www.forexlive.com/feed/news"
+    - "https://www.fxstreet.com/rss/news"
+    - "https://cointelegraph.com/rss"
+  lookback_minutes: 180
+
+calendar:
+  enabled: true
+  # ForexFactory weekly economic calendar (free JSON mirror)
+  url: "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+  impacts: ["High"]          # which impacts create blackout windows
+  event_duration_minutes: 15 # how long an event is considered "live"
+
+# Map MT5 symbols to keywords found in messages/articles.
+# keywords          -> positive text = bullish for the symbol
+# inverse_keywords  -> positive text = BEARISH for the symbol
+#                      (e.g. "strong dollar" is bearish EURUSD)
+symbols:
+  EURUSD:
+    keywords: ["eurusd", "eur/usd", "euro", "ecb", "lagarde", "eurozone"]
+    inverse_keywords: ["dollar", "dxy", "fed ", "fomc", "powell"]
+  GBPUSD:
+    keywords: ["gbpusd", "gbp/usd", "pound", "sterling", "cable", "boe "]
+    inverse_keywords: ["dollar", "dxy", "fed ", "fomc", "powell"]
+  USDJPY:
+    keywords: ["usdjpy", "usd/jpy", "dollar yen", "dxy"]
+    inverse_keywords: ["yen", "boj ", "bank of japan"]
+  XAUUSD:
+    keywords: ["xauusd", "gold", "xau "]
+    inverse_keywords: ["dollar", "dxy", "real yields"]
+  BTCUSD:
+    keywords: ["btc", "bitcoin", "btcusd"]
+    inverse_keywords: []

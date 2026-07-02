@@ -5,13 +5,16 @@
 //+------------------------------------------------------------------+
 #property copyright "GhostsBrigad"
 #property link      ""
-#property version   "1.00"
+#property version   "2.00"
 #property strict
 
 //--- Include utilities and risk
 #include "Utils/TradeUtils.mqh"
 #include "Utils/Indicators.mqh"
 #include "Risk/RiskManager.mqh"
+#include "Account/AccountProfile.mqh"
+#include "News/NewsSentiment.mqh"
+#include "Exit/ExitManager.mqh"
 
 //--- Include strategies
 #include "Strategies/EMA_Scalping.mqh"
@@ -51,6 +54,36 @@ input bool  InpUseTimeFilter  = true;    // Enable Time Filter
 input int   InpStartHour      = 8;       // Start Hour (08:00 London open)
 input int   InpEndHour        = 20;      // End Hour   (20:00 NY close)
 input bool  InpNoTradeOnFriday = true;   // Close Positions Before Weekend
+
+//--- Account Type & Fees (Exness)
+input group "=== ACCOUNT TYPE & FEES (Exness) ==="
+input ENUM_ACCOUNT_TYPE InpAccountType     = ACC_AUTO; // Account Type (Standard/Cent/Pro/Raw/Zero)
+input double            InpCommissionPerLot = -1.0;    // Commission USD/lot/side (-1 = default for type)
+input double            InpMaxTotalCostPips = 3.0;     // Max Total Cost: spread+commission (pips)
+input double            InpCostTPMultiple   = 3.0;     // TP must be >= N x total cost
+
+//--- Sentinel: news & Telegram sentiment feed
+input group "=== SENTINEL (News + Telegram Sentiment) ==="
+input bool   InpUseSentinel       = true;   // Use Sentinel Feed (if service running)
+input int    InpSentinelMaxAgeMin = 30;     // Max Feed Age (minutes)
+input double InpSentinelVetoLevel = 0.5;    // Veto Level (block trades against sentiment)
+input double InpSentinelMinConf   = 0.3;    // Min Confidence to act on sentiment
+input bool   InpUseNewsBlackout   = true;   // Block Entries Around High-Impact News
+input int    InpBlackoutPreMin    = 30;     // Blackout Before Event (minutes)
+input int    InpBlackoutPostMin   = 15;     // Blackout After Event (minutes)
+input bool   InpCloseBeforeNews   = false;  // Close Positions Before High-Impact News
+
+//--- Smart Exits
+input group "=== SMART EXITS ==="
+input bool   InpUsePartialClose   = true;   // Partial Close at Trigger
+input double InpPartialTriggerR   = 1.0;    // Partial Trigger (x initial risk)
+input double InpPartialPercent    = 50.0;   // Partial Close (%)
+input bool   InpUseChandelier     = true;   // Chandelier Trail After Partial
+input double InpChandelierMult    = 2.0;    // Chandelier ATR Multiplier
+input bool   InpUseTimeStop       = true;   // Time Stop for Stagnant Trades
+input int    InpTimeStopBars      = 24;     // Time Stop (bars)
+input bool   InpExitSentimentFlip = true;   // Exit on Strong Sentiment Flip
+input double InpFlipLevel         = 0.6;    // Flip Level (|score|)
 
 //--- Risk Management
 input group "=== RISK MANAGEMENT ==="
@@ -145,8 +178,10 @@ input int  InpComboMinAgree = 2;  // Min Strategies to Agree
 //==================================================================
 //  GLOBAL VARIABLES
 //==================================================================
-string   gSymbol;
-bool     gTradingEnabled = true;
+string             gSymbol;
+bool               gTradingEnabled = true;
+AccountCostProfile gCostProfile;
+ExitParams         gExitParams;
 
 //==================================================================
 //  EA INITIALIZATION
@@ -166,9 +201,31 @@ int OnInit()
       return INIT_PARAMETERS_INCORRECT;
    }
 
-   Print("GhostsBrigad EA initialized | Symbol: ", gSymbol,
+   // Account type & cost model (spread + commission per account type)
+   AccountProfile_Init(gCostProfile, InpAccountType, InpCommissionPerLot, gSymbol);
+   Print("GhostsBrigad cost model | ", Cost_Summary(gSymbol, gCostProfile));
+
+   // Smart-exit parameters
+   gExitParams.usePartialClose     = InpUsePartialClose;
+   gExitParams.partialTriggerR     = InpPartialTriggerR;
+   gExitParams.partialPercent      = InpPartialPercent;
+   gExitParams.useTimeStop         = InpUseTimeStop;
+   gExitParams.timeStopBars        = InpTimeStopBars;
+   gExitParams.timeframe           = InpTimeframe;
+   gExitParams.useChandelier       = InpUseChandelier;
+   gExitParams.atrPeriod           = InpATRPeriod;
+   gExitParams.chandelierMult      = InpChandelierMult;
+   gExitParams.exitOnSentimentFlip = InpUseSentinel && InpExitSentimentFlip;
+   gExitParams.flipLevel           = InpFlipLevel;
+   gExitParams.flipMinConfidence   = InpSentinelMinConf;
+   gExitParams.sentimentMaxAgeMin  = InpSentinelMaxAgeMin;
+   gExitParams.closeBeforeNews     = InpUseSentinel && InpCloseBeforeNews;
+   gExitParams.newsPreMinutes      = InpBlackoutPreMin;
+
+   Print("GhostsBrigad EA v2.0 initialized | Symbol: ", gSymbol,
          " | Strategy: ", EnumToString(InpStrategy),
-         " | Magic: ", InpMagicNumber);
+         " | Magic: ", InpMagicNumber,
+         " | Sentinel: ", (InpUseSentinel ? "ON" : "OFF"));
 
    return INIT_SUCCEEDED;
 }
@@ -231,11 +288,29 @@ void OnTick()
       return;
    }
 
-   // Spread filter
-   if(!IsSpreadAcceptable(gSymbol, InpMaxSpreadPips))
+   // Spread filter (raw spread) + total cost filter (spread + commission)
+   if(!IsSpreadAcceptable(gSymbol, InpMaxSpreadPips) ||
+      !Cost_IsSpreadAcceptable(gSymbol, gCostProfile, InpMaxTotalCostPips))
    {
       ManageOpenPositions();
       return;
+   }
+
+   // News blackout: no NEW entries around high-impact events
+   if(InpUseSentinel && InpUseNewsBlackout)
+   {
+      string eventTitle;
+      if(Sentinel_InBlackout(gSymbol, InpBlackoutPreMin, InpBlackoutPostMin, true, eventTitle))
+      {
+         static string lastEvent = "";
+         if(eventTitle != lastEvent)
+         {
+            Print("News blackout active, no new entries: ", eventTitle);
+            lastEvent = eventTitle;
+         }
+         ManageOpenPositions();
+         return;
+      }
    }
 
    // Max positions check
@@ -261,6 +336,16 @@ void OnTick()
       if(signal == -1 && htfBull)  { ManageOpenPositions(); return; }
    }
 
+   // Sentiment gate: never fight strong, confident market sentiment
+   if(InpUseSentinel &&
+      !Sentinel_AllowTrade(gSymbol, signal, InpSentinelMaxAgeMin,
+                           InpSentinelVetoLevel, InpSentinelMinConf))
+   {
+      Print("Trade vetoed by sentiment | Direction: ", signal);
+      ManageOpenPositions();
+      return;
+   }
+
    // Calculate SL/TP
    ENUM_ORDER_TYPE orderType = (signal == 1) ? ORDER_TYPE_BUY : ORDER_TYPE_SELL;
    double sl, tp;
@@ -276,15 +361,32 @@ void OnTick()
       tp = GetTPPrice(gSymbol, orderType, InpFixedTPPips);
    }
 
-   // Calculate lot size
-   double slPips = InpUseATRSLTP
-      ? (ATR(gSymbol, InpTimeframe, InpATRPeriod) * InpATRSLMult)
-        / (SymbolInfoDouble(gSymbol, SYMBOL_POINT) * 10)
+   // Calculate SL/TP distances in pips
+   double pipSize = SymbolInfoDouble(gSymbol, SYMBOL_POINT) * 10;
+   double slPips  = InpUseATRSLTP
+      ? (ATR(gSymbol, InpTimeframe, InpATRPeriod) * InpATRSLMult) / pipSize
       : InpFixedSLPips;
+   double tpPips  = InpUseATRSLTP
+      ? (ATR(gSymbol, InpTimeframe, InpATRPeriod) * InpATRTPMult) / pipSize
+      : InpFixedTPPips;
 
+   // Cost viability: skip trades whose TP does not clear the total
+   // round-trip cost (spread + commission) by a safe multiple.
+   if(!Cost_IsTradeViable(gSymbol, gCostProfile, tpPips, InpCostTPMultiple))
+   {
+      Print("Trade skipped: TP ", DoubleToString(tpPips, 1),
+            " pips does not cover ", DoubleToString(InpCostTPMultiple, 1),
+            "x cost (", DoubleToString(Cost_RoundTripPips(gSymbol, gCostProfile), 1), " pips)");
+      ManageOpenPositions();
+      return;
+   }
+
+   // Calculate lot size (commission included in risked amount)
    double lot;
    if(InpUseMartingale)
       lot = GetMartingaleLot(gSymbol, InpMagicNumber, InpFixedLot, InpMartMultiplier, InpMartMaxLevels);
+   else if(InpLotMode == LOT_PERCENT && gCostProfile.commissionBased)
+      lot = Cost_AwareLotSize(gSymbol, gCostProfile, InpRiskPercent, slPips);
    else
       lot = CalculateLotSize(gSymbol, InpLotMode, InpFixedLot, InpRiskPercent, slPips);
 
@@ -437,11 +539,21 @@ int GetComboSignal()
 //==================================================================
 void ManageOpenPositions()
 {
+   // Break-even offset must cover commission on Raw/Zero accounts,
+   // otherwise "break-even" still loses money after fees.
    if(InpUseBreakEven)
-      ApplyBreakEven(gSymbol, InpMagicNumber, InpBEtriggerPips, InpBEoffsetPips);
+   {
+      double beOffset = Cost_BreakEvenOffsetPips(gSymbol, gCostProfile, InpBEoffsetPips);
+      ApplyBreakEven(gSymbol, InpMagicNumber, InpBEtriggerPips, beOffset);
+   }
 
    if(InpUseTrailing)
       ApplyTrailingStop(gSymbol, InpMagicNumber, InpTrailPips, InpTrailStep);
+
+   // Smart exits: partial close, chandelier trail, time stop,
+   // sentiment-flip exit, pre-news flat
+   Exit_ManageAll(gSymbol, InpMagicNumber, gExitParams,
+                  Cost_RoundTripPips(gSymbol, gCostProfile));
 }
 
 //==================================================================
@@ -463,9 +575,15 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
             string symbol = HistoryDealGetString(trans.deal, DEAL_SYMBOL);
             long   entry  = HistoryDealGetInteger(trans.deal, DEAL_ENTRY);
             if(entry == DEAL_ENTRY_OUT)
+            {
                Print("Deal closed | Symbol: ", symbol,
                      " | Profit: ", DoubleToString(profit, 2),
                      " | Magic: ", magic);
+               // Drop per-ticket exit-manager state once fully closed
+               ulong posId = (ulong)HistoryDealGetInteger(trans.deal, DEAL_POSITION_ID);
+               if(!PositionSelectByTicket(posId))
+                  Exit_CleanupTicket(posId);
+            }
          }
       }
    }

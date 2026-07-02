@@ -2,7 +2,7 @@
 
 | Projet | Dossier | Description |
 |---|---|---|
-| 🤖 **Ghosts Brigad MT5** | [`ghostsbrigad-mt5/`](ghostsbrigad-mt5/) | Bot scalping MetaTrader 5 multi-stratégies pour le broker Exness |
+| 🤖 **Ghosts Brigad MT5** | [`ghostsbrigad-mt5/`](ghostsbrigad-mt5/) | Bot scalping MetaTrader 5 multi-stratégies pour Exness : frais par type de compte (Standard/Pro/Raw/Zero), sentiment news + Telegram (service Sentinel), sorties intelligentes |
 | 💪 **FitFlow** | [`fitflow/`](fitflow/) | App mobile fitness & nutrition (Flutter, iOS + Android) avec coach IA |
 
 Chaque dossier est **indépendant** : il a son propre README, ses dépendances et son cycle de build.
