@@ -174,6 +174,7 @@ input bool InpComboBB    = false; // Include BB in Combo
 input bool InpComboMACD  = true;  // Include MACD in Combo
 input bool InpComboSR    = false; // Include S/R in Combo
 input int  InpComboMinAgree = 2;  // Min Strategies to Agree
+input int  InpComboWindowBars = 3; // Vote Validity Window (bars)
 
 //==================================================================
 //  GLOBAL VARIABLES
@@ -473,20 +474,37 @@ int GetSignal()
    return direction;
 }
 
-//--- Combo: count how many strategies agree
+//--- Combo vote memory: momentum signals (EMA cross, MACD flip, RSI
+//    exit) rarely fire on the exact same bar even when they agree on
+//    the move. Each strategy's last vote therefore stays valid for
+//    InpComboWindowBars bars, and votes are counted over that window.
+datetime gVoteTime[5] = {0, 0, 0, 0, 0}; // EMA, RSI, BB, MACD, SR
+int      gVoteDir[5]  = {0, 0, 0, 0, 0};
+
+void ComboRecordVote(int slot, int direction)
+{
+   if(direction == 0) return;
+   gVoteDir[slot]  = direction;
+   gVoteTime[slot] = iTime(gSymbol, InpTimeframe, 0);
+}
+
+bool ComboVoteActive(int slot)
+{
+   if(gVoteDir[slot] == 0 || gVoteTime[slot] == 0) return false;
+   int windowSec = InpComboWindowBars * PeriodSeconds(InpTimeframe);
+   return (iTime(gSymbol, InpTimeframe, 0) - gVoteTime[slot]) < windowSec;
+}
+
+//--- Combo: count strategies agreeing within the vote window
 int GetComboSignal()
 {
-   int buyVotes  = 0;
-   int sellVotes = 0;
-
    if(InpComboEMA)
    {
       EMAScalpSignal s = EMAScalping_GetSignal(
          gSymbol, InpTimeframe,
          InpEMAFast, InpEMASlow, InpEMATrend,
          InpADXPeriod, InpADXThreshold, true);
-      if(s.direction ==  1) buyVotes++;
-      if(s.direction == -1) sellVotes++;
+      ComboRecordVote(0, s.direction);
    }
 
    if(InpComboRSI)
@@ -495,8 +513,7 @@ int GetComboSignal()
          gSymbol, InpTimeframe,
          InpRSIPeriod, InpRSIOversold, InpRSIOverbought,
          InpStochK, InpStochD, InpStochSlowing, 20.0, 80.0, true);
-      if(s.direction ==  1) buyVotes++;
-      if(s.direction == -1) sellVotes++;
+      ComboRecordVote(1, s.direction);
    }
 
    if(InpComboBB)
@@ -505,8 +522,7 @@ int GetComboSignal()
          gSymbol, InpTimeframe, InpBBMode,
          InpBBPeriod, InpBBDeviation,
          InpRSIPeriod, 40.0, 60.0);
-      if(s.direction ==  1) buyVotes++;
-      if(s.direction == -1) sellVotes++;
+      ComboRecordVote(2, s.direction);
    }
 
    if(InpComboMACD)
@@ -515,8 +531,7 @@ int GetComboSignal()
          gSymbol, InpTimeframe,
          InpMACDFast, InpMACDSlow, InpMACDSignal,
          InpEMATrend, InpMACDZeroCross, true, true);
-      if(s.direction ==  1) buyVotes++;
-      if(s.direction == -1) sellVotes++;
+      ComboRecordVote(3, s.direction);
    }
 
    if(InpComboSR)
@@ -525,12 +540,19 @@ int GetComboSignal()
          gSymbol, InpTimeframe,
          InpSRZonePips, InpSRUsePivots, InpSRUseSwings,
          InpSRLookback, InpSRLeftBars);
-      if(s.direction ==  1) buyVotes++;
-      if(s.direction == -1) sellVotes++;
+      ComboRecordVote(4, s.direction);
    }
 
-   if(buyVotes  >= InpComboMinAgree) return  1;
-   if(sellVotes >= InpComboMinAgree) return -1;
+   int buyVotes = 0, sellVotes = 0;
+   for(int i = 0; i < 5; i++)
+   {
+      if(!ComboVoteActive(i)) continue;
+      if(gVoteDir[i] ==  1) buyVotes++;
+      if(gVoteDir[i] == -1) sellVotes++;
+   }
+
+   if(buyVotes  >= InpComboMinAgree && sellVotes == 0) return  1;
+   if(sellVotes >= InpComboMinAgree && buyVotes == 0)  return -1;
    return 0;
 }
 

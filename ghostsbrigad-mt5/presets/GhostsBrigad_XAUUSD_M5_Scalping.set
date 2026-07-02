@@ -86,3 +86,4 @@ InpComboBB=false
 InpComboMACD=true
 InpComboSR=false
 InpComboMinAgree=2
+InpComboWindowBars=3
