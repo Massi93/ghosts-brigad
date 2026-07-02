@@ -39,23 +39,30 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ghostsbrigad-mt5/backtest/data
-          key: dukascopy-${{ env.START }}-${{ env.END }}
+          key: dukascopy-v2-${{ env.START }}-${{ env.END }}
           restore-keys: dukascopy-
 
       - name: Installer les dependances
         run: pip install -r requirements.txt
 
-      - name: Backtest XAUUSD + BTCUSD (dosage des filtres)
+      - name: Backtest configs finales, en et hors echantillon
         run: |
-          for combo in "XAUUSD 5 standard safety" "XAUUSD 5 raw safety" \
-                       "XAUUSD 5 raw all" \
-                       "BTCUSD 15 raw all" "BTCUSD 15 standard all"; do
-            set -- $combo
-            echo "::group::$1 M$2 / $3 / filtres=$4"
-            python ghostsbrigad_backtest.py \
-              --symbol "$1" --tf "$2" --account "$3" --filters "$4" \
-              --start "$START" --end "$END" \
-              | tee -a "$GITHUB_STEP_SUMMARY"
-            echo "::endgroup::"
+          # Configs des presets livres, testees sur la periode de reglage
+          # (START-END) ET sur la periode precedente jamais vue (out-of-
+          # sample) pour detecter le sur-ajustement.
+          for period in "$START $END" "2024-07-01 2025-06-30"; do
+            set -- $period
+            P_START=$1; P_END=$2
+            for combo in "XAUUSD 5 standard none" "XAUUSD 5 raw none" \
+                         "BTCUSD 15 standard all" "BTCUSD 15 raw all" \
+                         "EURUSD 5 standard all"; do
+              set -- $combo
+              echo "::group::$1 M$2 / $3 / filtres=$4 / $P_START -> $P_END"
+              python ghostsbrigad_backtest.py \
+                --symbol "$1" --tf "$2" --account "$3" --filters "$4" \
+                --start "$P_START" --end "$P_END" \
+                | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "::endgroup::"
+            done
           done
 
