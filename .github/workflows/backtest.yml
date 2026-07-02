@@ -11,6 +11,15 @@ on:
         description: "Date de fin (YYYY-MM-DD)"
         required: false
         default: "2026-06-30"
+  push:
+    branches: [BrigadBot]
+    paths:
+      - "ghostsbrigad-mt5/backtest/**"
+      - ".github/workflows/backtest.yml"
+
+env:
+  START: ${{ inputs.start || '2025-07-01' }}
+  END: ${{ inputs.end || '2026-06-30' }}
 
 jobs:
   backtest:
@@ -30,7 +39,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ghostsbrigad-mt5/backtest/data
-          key: dukascopy-${{ inputs.start }}-${{ inputs.end }}
+          key: dukascopy-${{ env.START }}-${{ env.END }}
           restore-keys: dukascopy-
 
       - name: Installer les dependances
@@ -43,7 +52,7 @@ jobs:
               echo "::group::$sym / $acc"
               python ghostsbrigad_backtest.py \
                 --symbol "$sym" --account "$acc" \
-                --start "${{ inputs.start }}" --end "${{ inputs.end }}" \
+                --start "$START" --end "$END" \
                 | tee -a "$GITHUB_STEP_SUMMARY"
               echo "::endgroup::"
             done
