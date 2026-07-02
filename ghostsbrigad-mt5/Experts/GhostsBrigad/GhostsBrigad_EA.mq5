@@ -15,6 +15,7 @@
 #include "Account/AccountProfile.mqh"
 #include "News/NewsSentiment.mqh"
 #include "Exit/ExitManager.mqh"
+#include "Filters/ScalpFilters.mqh"
 
 //--- Include strategies
 #include "Strategies/EMA_Scalping.mqh"
@@ -72,6 +73,24 @@ input bool   InpUseNewsBlackout   = true;   // Block Entries Around High-Impact 
 input int    InpBlackoutPreMin    = 30;     // Blackout Before Event (minutes)
 input int    InpBlackoutPostMin   = 15;     // Blackout After Event (minutes)
 input bool   InpCloseBeforeNews   = false;  // Close Positions Before High-Impact News
+
+//--- Scalping Discipline Filters
+input group "=== SCALPING FILTERS ==="
+input bool   InpUseVolRegime     = true;   // Volatility Regime Filter
+input int    InpAtrBasePeriod    = 100;    // ATR Baseline Period
+input double InpMinAtrRatio      = 0.7;    // Min ATR / Baseline Ratio
+input double InpMaxAtrRatio      = 2.0;    // Max ATR / Baseline Ratio
+input bool   InpUseExhaustionFlt = true;   // Skip After Exhaustion Bar
+input double InpExhaustionMult   = 2.5;    // Exhaustion Bar (x ATR)
+input bool   InpUseRolloverFlt   = true;   // Rollover Blackout (spread spike)
+input int    InpRolloverStart    = 22;     // Rollover Start Hour (server)
+input int    InpRolloverEnd      = 23;     // Rollover End Hour (server)
+input bool   InpUseLossCooldown  = true;   // Cooldown After Loss Streak
+input int    InpCooldownLosses   = 3;      // Losses to Trigger Cooldown
+input int    InpCooldownMinutes  = 120;    // Cooldown Duration (minutes)
+input int    InpMaxTradesPerDay  = 10;     // Max Trades Per Day (0 = off)
+input int    InpMinBarsBetween   = 3;      // Min Bars Between Entries
+input bool   InpUseAdaptiveRisk  = true;   // Adaptive Risk (anti-martingale)
 
 //--- Smart Exits
 input group "=== SMART EXITS ==="
@@ -321,6 +340,13 @@ void OnTick()
       return;
    }
 
+   // Scalping discipline filters (see Filters/ScalpFilters.mqh)
+   if(!PassScalpFilters())
+   {
+      ManageOpenPositions();
+      return;
+   }
+
    // Get trade signal
    int signal = GetSignal();
    if(signal == 0)
@@ -382,14 +408,19 @@ void OnTick()
       return;
    }
 
-   // Calculate lot size (commission included in risked amount)
+   // Calculate lot size (commission included in risked amount).
+   // Adaptive risk shrinks position size during a losing streak.
+   double effRisk = InpUseAdaptiveRisk
+      ? Scalp_AdaptiveRiskPercent(gSymbol, InpMagicNumber, InpRiskPercent)
+      : InpRiskPercent;
+
    double lot;
    if(InpUseMartingale)
       lot = GetMartingaleLot(gSymbol, InpMagicNumber, InpFixedLot, InpMartMultiplier, InpMartMaxLevels);
    else if(InpLotMode == LOT_PERCENT && gCostProfile.commissionBased)
-      lot = Cost_AwareLotSize(gSymbol, gCostProfile, InpRiskPercent, slPips);
+      lot = Cost_AwareLotSize(gSymbol, gCostProfile, effRisk, slPips);
    else
-      lot = CalculateLotSize(gSymbol, InpLotMode, InpFixedLot, InpRiskPercent, slPips);
+      lot = CalculateLotSize(gSymbol, InpLotMode, InpFixedLot, effRisk, slPips);
 
    if(!HasSufficientMargin(gSymbol, lot)) return;
 
@@ -408,6 +439,49 @@ void OnTick()
       Print("Trade failed | Error: ", Trade.ResultRetcode(), " | ", Trade.ResultRetcodeDescription());
 
    ManageOpenPositions();
+}
+
+//==================================================================
+//  SCALPING DISCIPLINE FILTERS
+//==================================================================
+bool PassScalpFilters()
+{
+   if(InpUseRolloverFlt &&
+      !Scalp_OutsideRollover(InpRolloverStart, InpRolloverEnd))
+      return false;
+
+   if(InpUseVolRegime &&
+      !Scalp_VolRegimeOK(gSymbol, InpTimeframe, InpATRPeriod,
+                         InpAtrBasePeriod, InpMinAtrRatio, InpMaxAtrRatio))
+      return false;
+
+   if(InpUseExhaustionFlt &&
+      !Scalp_NoExhaustionBar(gSymbol, InpTimeframe, InpATRPeriod,
+                             InpExhaustionMult))
+      return false;
+
+   if(InpUseLossCooldown &&
+      Scalp_LossCooldownActive(gSymbol, InpMagicNumber,
+                               InpCooldownLosses, InpCooldownMinutes))
+   {
+      static datetime lastLog = 0;
+      if(TimeCurrent() - lastLog > 1800)
+      {
+         Print("Loss cooldown active: pausing after ",
+               InpCooldownLosses, " consecutive losses");
+         lastLog = TimeCurrent();
+      }
+      return false;
+   }
+
+   if(!Scalp_DailyTradesOK(gSymbol, InpMagicNumber, InpMaxTradesPerDay))
+      return false;
+
+   if(!Scalp_EntrySpacingOK(gSymbol, InpMagicNumber, InpTimeframe,
+                            InpMinBarsBetween))
+      return false;
+
+   return true;
 }
 
 //==================================================================

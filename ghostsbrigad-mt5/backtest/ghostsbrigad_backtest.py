@@ -84,6 +84,18 @@ PRESETS = {
 DAILY_LOSS_LIMIT_PCT = 5.0
 START_BALANCE = 10_000.0
 
+# Scalping discipline filters (mirror Filters/ScalpFilters.mqh)
+SCALP_FILTERS = dict(
+    use_vol_regime=True, atr_base_period=100,
+    min_atr_ratio=0.7, max_atr_ratio=2.0,
+    use_exhaustion=True, exhaustion_mult=2.5,
+    use_rollover=True, rollover_start=22, rollover_end=23,
+    use_loss_cooldown=True, cooldown_losses=3, cooldown_minutes=120,
+    max_trades_per_day=10,
+    min_bars_between=3,
+    use_adaptive_risk=True,
+)
+
 
 # ----------------------------------------------------------------------
 # Data: Dukascopy M1 BID candles (cached locally)
@@ -291,7 +303,9 @@ class Result:
         self.max_dd = max(self.max_dd, dd)
 
 
-def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str) -> Result:
+def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str,
+                 filters: dict | None = None) -> Result:
+    f = filters if filters is not None else SCALP_FILTERS
     pip = p["pip"]
     pip_val = p["pip_value_per_lot"]
     spread = p["spread_pips"][account] * pip
@@ -301,6 +315,8 @@ def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str) -> R
 
     sig = combo_signals(m5, p).shift().fillna(0)      # act at next bar open
     atr = atr_wilder(m5, 14).shift()
+    atr_base = atr_wilder(m5, f["atr_base_period"]).shift()
+    prev_range = (m5["high"] - m5["low"]).shift()
     h1_ema = ema(h1["close"], 50)
     # last completed H1 value known at each M5 bar
     h1_ema_on_m5 = h1_ema.reindex(m5.index, method="ffill")
@@ -309,6 +325,11 @@ def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str) -> R
     res = Result()
     positions: list[Position] = []
     day_start_balance, cur_day = res.balance, None
+    # scalping-discipline state
+    loss_streak = 0
+    cooldown_until = None
+    trades_today = 0
+    last_entry_idx = -10_000
 
     o = m5["open"].values
     hi = m5["high"].values
@@ -317,20 +338,33 @@ def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str) -> R
     idx = m5.index
     sig_v = sig.values
     atr_v = atr.values
+    atr_base_v = atr_base.values
+    prev_range_v = prev_range.values
     htf_bull_v = (h1_close_on_m5 > h1_ema_on_m5).values
 
     def close_pos(pos: Position, price: float, i: int, reason: str):
+        nonlocal loss_streak, cooldown_until
         gross = (price - pos.entry) * pos.direction * pos.lots / pip * pip_val
         comm = comm_pips_rt * pip_val * pos.lots
         usd = gross - comm + pos.realized
         pips = (price - pos.entry) * pos.direction / pip
         res.book(idx[i], usd, pips)
+        # loss-streak tracking for cooldown & adaptive risk
+        if usd < 0:
+            loss_streak += 1
+            if (f["use_loss_cooldown"]
+                    and loss_streak >= f["cooldown_losses"]):
+                cooldown_until = idx[i] + pd.Timedelta(
+                    minutes=f["cooldown_minutes"])
+        else:
+            loss_streak = 0
 
-    for i in range(60, len(m5)):
+    for i in range(120, len(m5)):
         t = idx[i]
         if cur_day != t.date():
             cur_day = t.date()
             day_start_balance = res.balance
+            trades_today = 0
 
         # --- manage open positions ---------------------------------
         still_open = []
@@ -395,6 +429,27 @@ def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str) -> R
             continue
         if len(positions) >= p["max_positions"]:
             continue
+
+        # --- scalping discipline filters (ScalpFilters.mqh) ----------
+        if f["use_rollover"] and f["rollover_start"] <= t.hour < f["rollover_end"]:
+            continue
+        if f["use_vol_regime"]:
+            if np.isnan(atr_base_v[i]) or atr_base_v[i] <= 0 or np.isnan(atr_v[i]):
+                continue
+            ratio = atr_v[i] / atr_base_v[i]
+            if not (f["min_atr_ratio"] <= ratio <= f["max_atr_ratio"]):
+                continue
+        if (f["use_exhaustion"] and not np.isnan(prev_range_v[i])
+                and not np.isnan(atr_v[i])
+                and prev_range_v[i] > atr_v[i] * f["exhaustion_mult"]):
+            continue
+        if cooldown_until is not None and t < cooldown_until:
+            continue
+        if f["max_trades_per_day"] > 0 and trades_today >= f["max_trades_per_day"]:
+            continue
+        if i - last_entry_idx < f["min_bars_between"]:
+            continue
+
         direction = int(sig_v[i])
         if direction == 0 or np.isnan(atr_v[i]):
             continue
@@ -410,16 +465,26 @@ def run_backtest(m5: pd.DataFrame, h1: pd.DataFrame, p: dict, account: str) -> R
             continue
 
         # --- open ----------------------------------------------------
+        # adaptive risk: half size after 2 straight losses, third after 4
+        risk_pct = p["risk_percent"]
+        if f["use_adaptive_risk"]:
+            if loss_streak >= 4:
+                risk_pct /= 3.0
+            elif loss_streak >= 2:
+                risk_pct /= 2.0
+
         sl_dist = atr_v[i] * p["atr_sl_mult"]
         entry = o[i] + spread if direction == 1 else o[i]
         sl = entry - direction * sl_dist - (spread if direction == -1 else 0)
         tp = entry + direction * atr_v[i] * p["atr_tp_mult"]
         sl_pips = abs(entry - sl) / pip
-        risk_usd = res.balance * p["risk_percent"] / 100.0
+        risk_usd = res.balance * risk_pct / 100.0
         denom = sl_pips * pip_val + comm_pips_rt * pip_val
         lots = max(0.01, round(risk_usd / denom, 2)) if denom > 0 else 0.01
         positions.append(Position(direction, entry, sl, tp, lots,
                                   abs(entry - sl), i))
+        trades_today += 1
+        last_entry_idx = i
 
     # close anything still open at the end
     for pos in positions:
@@ -441,7 +506,7 @@ def report(res: Result, symbol: str, account: str, start: date, end: date):
     ret = (res.balance / START_BALANCE - 1) * 100
 
     print()
-    print(f"=== GhostsBrigad backtest | {symbol} M5 COMBO | compte {account.upper()} ===")
+    print(f"=== GhostsBrigad backtest | {symbol} COMBO | compte {account.upper()} ===")
     print(f"Periode         : {start} -> {end}")
     print(f"Trades          : {len(df)}")
     print(f"Win rate        : {len(wins) / len(df) * 100:.1f}%")
@@ -494,6 +559,10 @@ def main():
     ap.add_argument("--symbol", default="XAUUSD", choices=list(PRESETS))
     ap.add_argument("--account", default="standard",
                     choices=["standard", "pro", "raw", "zero"])
+    ap.add_argument("--tf", default="5", choices=["5", "15", "30"],
+                    help="timeframe en minutes (defaut: 5)")
+    ap.add_argument("--no-filters", action="store_true",
+                    help="desactive les filtres de discipline scalping")
     ap.add_argument("--start", default=None, help="YYYY-MM-DD (defaut: -12 mois)")
     ap.add_argument("--end", default=None, help="YYYY-MM-DD (defaut: hier)")
     ap.add_argument("--cache", default="data", help="dossier cache donnees")
@@ -509,12 +578,20 @@ def main():
 
     print(f"Telechargement {args.symbol} M1 {start} -> {end} (Dukascopy)...")
     m1 = load_data(args.symbol, start, end, Path(args.cache))
-    m5 = resample(m1, "5min")
+    bars = resample(m1, f"{args.tf}min")
     h1 = resample(m1, "1h")
-    print(f"{len(m5):,} bougies M5 chargees.")
+    print(f"{len(bars):,} bougies M{args.tf} chargees.")
 
-    res = run_backtest(m5, h1, PRESETS[args.symbol], args.account)
-    report(res, args.symbol, args.account, start, end)
+    filters = dict(SCALP_FILTERS)
+    if args.no_filters:
+        filters.update(use_vol_regime=False, use_exhaustion=False,
+                       use_rollover=False, use_loss_cooldown=False,
+                       max_trades_per_day=0, min_bars_between=0,
+                       use_adaptive_risk=False)
+
+    res = run_backtest(bars, h1, PRESETS[args.symbol], args.account, filters)
+    label = f"{args.symbol} M{args.tf}" + (" sans filtres" if args.no_filters else "")
+    report(res, label, args.account, start, end)
 
 
 if __name__ == "__main__":
