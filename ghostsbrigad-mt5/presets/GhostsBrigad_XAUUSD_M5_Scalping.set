@@ -1,8 +1,8 @@
 ; GhostsBrigad EA v2.0 - Preset scalping XAUUSD (Or) M5
-; ATTENTION - NON VALIDE hors echantillon : gagnant sur 2025-26 (PF 1.33-1.40)
-; mais PERDANT sur 2024-25 jamais vue (PF 0.93-0.96, -1 a -2%). Le gain venait
-; de la tendance or 2025-26, pas de la strategie. Demo en observation seulement,
-; risque minimal. Voir backtest/RESULTS-2026-07-02.md
+; AVEC CONFLUENCE (active ci-dessous) : positif sur les DEUX annees testees
+; 2025-26 : PF 1.11 (+0.6%) | 2024-25 : PF 1.89 (+4.4%, win rate 57%). Sans
+; confluence l or perdait sur 2024-25. Peu de trades (~30/an) mais de qualite.
+; Voir backtest/RESULTS-2026-07-02.md
 ; Rappel echelle : sur XAUUSD Exness, 1 "pip" du bot = 0.10 USD/oz (10 points)
 ; ATR M5 or ~ 15-30 pips -> SL/TP en mode ATR (recommande, active ci-dessous)
 ; Verifie la ligne de couts affichee par l'EA au demarrage (onglet Experts)
@@ -106,3 +106,16 @@ InpCooldownMinutes=120
 InpMaxTradesPerDay=10
 InpMinBarsBetween=0
 InpUseAdaptiveRisk=false
+InpUseConfluence=true
+InpConfluenceMin=20.0
+InpConfluenceMinN=2
+InpConfDow=true
+InpConfPriceAction=true
+InpConfFibonacci=true
+InpConfWyckoff=true
+InpConfSMC=true
+InpConfVWAP=true
+InpConfVolProfile=true
+InpConfOrderFlow=true
+InpConfElliott=false
+InpConfGann=false
