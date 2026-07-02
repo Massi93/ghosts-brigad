@@ -33,8 +33,10 @@ jobs:
           $mt5 = "C:\Program Files\MetaTrader 5"
           Copy-Item "ghostsbrigad-mt5\Experts\GhostsBrigad" "$mt5\MQL5\Experts\" -Recurse -Force
           $ea = "$mt5\MQL5\Experts\GhostsBrigad\GhostsBrigad_EA.mq5"
-          Start-Process "$mt5\metaeditor64.exe" -ArgumentList "/compile:`"$ea`"","/log:compile.log" -Wait
-          if (Test-Path compile.log) { Get-Content compile.log -Encoding Unicode }
+          $log = "$env:GITHUB_WORKSPACE\compile.log"
+          $p = Start-Process "$mt5\metaeditor64.exe" -ArgumentList "/compile:`"$ea`"","/include:`"$mt5\MQL5`"","/log:`"$log`"" -Wait -PassThru
+          Write-Host "MetaEditor exit code: $($p.ExitCode)"
+          if (Test-Path $log) { Get-Content $log -Encoding Unicode } else { Write-Host "Aucun log genere" }
           $ex5 = "$mt5\MQL5\Experts\GhostsBrigad\GhostsBrigad_EA.ex5"
           if (-not (Test-Path $ex5)) { Write-Error "Compilation echouee"; exit 1 }
           Copy-Item $ex5 "ghostsbrigad-mt5\Experts\GhostsBrigad\"
