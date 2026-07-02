@@ -45,14 +45,15 @@ jobs:
       - name: Installer les dependances
         run: pip install -r requirements.txt
 
-      - name: Backtest XAUUSD + BTCUSD (filtres scalping, multi-timeframes)
+      - name: Backtest XAUUSD + BTCUSD (dosage des filtres)
         run: |
-          for combo in "XAUUSD 5 standard" "XAUUSD 5 raw" \
-                       "BTCUSD 5 raw" "BTCUSD 15 raw" "BTCUSD 30 raw"; do
+          for combo in "XAUUSD 5 standard safety" "XAUUSD 5 raw safety" \
+                       "XAUUSD 5 raw all" \
+                       "BTCUSD 15 raw all" "BTCUSD 15 standard all"; do
             set -- $combo
-            echo "::group::$1 M$2 / $3"
+            echo "::group::$1 M$2 / $3 / filtres=$4"
             python ghostsbrigad_backtest.py \
-              --symbol "$1" --tf "$2" --account "$3" \
+              --symbol "$1" --tf "$2" --account "$3" --filters "$4" \
               --start "$START" --end "$END" \
               | tee -a "$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"

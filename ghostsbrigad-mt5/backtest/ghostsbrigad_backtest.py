@@ -561,8 +561,11 @@ def main():
                     choices=["standard", "pro", "raw", "zero"])
     ap.add_argument("--tf", default="5", choices=["5", "15", "30"],
                     help="timeframe en minutes (defaut: 5)")
-    ap.add_argument("--no-filters", action="store_true",
-                    help="desactive les filtres de discipline scalping")
+    ap.add_argument("--filters", default="all",
+                    choices=["all", "safety", "none"],
+                    help="all = tous les filtres discipline; safety = "
+                         "cooldown + risque adaptatif + plafond/jour "
+                         "seulement; none = aucun")
     ap.add_argument("--start", default=None, help="YYYY-MM-DD (defaut: -12 mois)")
     ap.add_argument("--end", default=None, help="YYYY-MM-DD (defaut: hier)")
     ap.add_argument("--cache", default="data", help="dossier cache donnees")
@@ -583,14 +586,19 @@ def main():
     print(f"{len(bars):,} bougies M{args.tf} chargees.")
 
     filters = dict(SCALP_FILTERS)
-    if args.no_filters:
+    if args.filters == "safety":
+        # keep only the filters that protect capital without
+        # suppressing entry signals
+        filters.update(use_vol_regime=False, use_exhaustion=False,
+                       min_bars_between=0)
+    elif args.filters == "none":
         filters.update(use_vol_regime=False, use_exhaustion=False,
                        use_rollover=False, use_loss_cooldown=False,
                        max_trades_per_day=0, min_bars_between=0,
                        use_adaptive_risk=False)
 
     res = run_backtest(bars, h1, PRESETS[args.symbol], args.account, filters)
-    label = f"{args.symbol} M{args.tf}" + (" sans filtres" if args.no_filters else "")
+    label = f"{args.symbol} M{args.tf} filtres={args.filters}"
     report(res, label, args.account, start, end)
 
 
