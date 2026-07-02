@@ -1,7 +1,6 @@
-; GhostsBrigad EA v2.0 - Preset scalping BTCUSD M5
-; ATTENTION : backtest 12 mois (07/2025-06/2026) NEGATIF avec ces reglages
-; (PF 0.78, -16.7%). Voir backtest/RESULTS-2026-07-02.md avant toute
-; utilisation. Pistes : M15/M30, ADX plus strict, ou eviter le BTC.
+; GhostsBrigad EA v2.0 - Preset scalping BTCUSD M15
+; VALIDE backtest 12 mois en M15 avec filtres discipline : PF 1.32 (Raw) / 1.39 (Standard),
+; +3.0 a +3.7%, DD max 1.8%. NE PAS repasser en M5 (perdant). Voir backtest/RESULTS-2026-07-02.md
 ; Rappel echelle : sur BTCUSD Exness, 1 "pip" du bot = 0.10 USD
 ; -> le spread BTC (~15-25 USD) = 150-250 pips, l'ATR M5 = 1500-4000 pips.
 ; Les valeurs en pips ci-dessous sont donc volontairement grandes.
@@ -10,7 +9,7 @@
 ; Verifie la ligne de couts affichee par l'EA au demarrage (onglet Experts)
 InpStrategy=5
 InpSymbol=
-InpTimeframe=5
+InpTimeframe=15
 InpMagicNumber=202403
 InpTradeComment=GhostsBrigad-BTC
 InpUseTimeFilter=false
@@ -93,3 +92,18 @@ InpComboMACD=true
 InpComboSR=false
 InpComboMinAgree=2
 InpComboWindowBars=3
+InpUseVolRegime=true
+InpAtrBasePeriod=100
+InpMinAtrRatio=0.7
+InpMaxAtrRatio=2.0
+InpUseExhaustionFlt=true
+InpExhaustionMult=2.5
+InpUseRolloverFlt=true
+InpRolloverStart=22
+InpRolloverEnd=23
+InpUseLossCooldown=true
+InpCooldownLosses=3
+InpCooldownMinutes=120
+InpMaxTradesPerDay=10
+InpMinBarsBetween=3
+InpUseAdaptiveRisk=true

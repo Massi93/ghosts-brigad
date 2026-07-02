@@ -1,4 +1,7 @@
 ; GhostsBrigad EA v2.0 - Preset scalping XAUUSD (Or) M5
+; VALIDE backtest 12 mois : PF 1.33 (Standard) / 1.40 (Raw), +5.2 a +6.3%, DD max 2.8%.
+; Les filtres discipline sont volontairement OFF sur l or : le backtest montre
+; qu ils coupent les bons trades (PF 1.40 sans -> 1.09 avec). Voir backtest/RESULTS-2026-07-02.md
 ; Rappel echelle : sur XAUUSD Exness, 1 "pip" du bot = 0.10 USD/oz (10 points)
 ; ATR M5 or ~ 15-30 pips -> SL/TP en mode ATR (recommande, active ci-dessous)
 ; Verifie la ligne de couts affichee par l'EA au demarrage (onglet Experts)
@@ -87,3 +90,18 @@ InpComboMACD=true
 InpComboSR=false
 InpComboMinAgree=2
 InpComboWindowBars=3
+InpUseVolRegime=false
+InpAtrBasePeriod=100
+InpMinAtrRatio=0.7
+InpMaxAtrRatio=2.0
+InpUseExhaustionFlt=false
+InpExhaustionMult=2.5
+InpUseRolloverFlt=true
+InpRolloverStart=22
+InpRolloverEnd=23
+InpUseLossCooldown=false
+InpCooldownLosses=3
+InpCooldownMinutes=120
+InpMaxTradesPerDay=10
+InpMinBarsBetween=0
+InpUseAdaptiveRisk=false

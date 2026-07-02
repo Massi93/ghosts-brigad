@@ -94,7 +94,7 @@ Deux presets dédiés sont fournis dans `presets/` :
 | Fichier | Instrument | Points clés |
 |---|---|---|
 | `GhostsBrigad_XAUUSD_M5_Scalping.set` | Or | Heures 10h–20h (Londres+NY), SL/TP ATR élargis (2.0×/3.0×), fermeture avant les news à fort impact activée, magic 202402 |
-| `GhostsBrigad_BTCUSD_M5_Scalping.set` | Bitcoin | 24h/7j (filtre horaire OFF, pas de fermeture vendredi), risque réduit à 0.5 %, 1 position max, seuils en pips adaptés à l'échelle BTC, magic 202403 |
+| `GhostsBrigad_BTCUSD_M15_Scalping.set` | Bitcoin (M15) | 24h/7j (filtre horaire OFF, pas de fermeture vendredi), risque réduit à 0.5 %, 1 position max, seuils en pips adaptés à l'échelle BTC, magic 202403 |
 
 ### ⚠️ L'échelle des « pips » n'est pas la même !
 
