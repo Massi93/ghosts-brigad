@@ -169,12 +169,39 @@ journalière, drawdown max).
    colle ton MetaQuotes ID
 3. Dans l'EA : `InpNotifyPush = true`
 
-**Option B — Telegram** :
+**Option B — Telegram (recommandé : contrôle complet à distance)** :
 1. Dans Telegram, parle à **@BotFather** → `/newbot` → note le **token**
 2. Parle à **@userinfobot** → note ton **chat id**
 3. MT5 : **Outils → Options → Expert Advisors** → coche « Autoriser
    WebRequest pour les URL listées » → ajoute `https://api.telegram.org`
 4. Dans l'EA : `InpTgToken` = le token, `InpTgChatID` = ton chat id
+5. Ouvre la conversation avec ton bot Telegram et envoie `/help`
+
+### 🎮 Piloter le bot depuis Telegram
+
+Une fois le token/chat id configurés, le bot obéit à tes commandes
+(uniquement depuis TON chat id — toute autre personne est ignorée) :
+
+| Commande | Effet |
+|---|---|
+| `/status` | État complet : solde, equity, positions, risque, spread, mode SL/TP |
+| `/positions` | Liste des positions ouvertes avec P&L |
+| `/pause` | Suspend les nouvelles entrées (les positions restent gérées) |
+| `/resume` | Reprend le trading |
+| `/close` | Ferme toutes les positions de ce bot |
+| `/buy 0.05` / `/sell` | Ordre manuel (lot optionnel, sinon taille au risque) |
+| `/risk 1.5` | Change le % de risque par trade |
+| `/sl 30` / `/tp 50` | SL/TP fixes en pips (désactive le mode ATR) |
+| `/atr` | Revient au SL/TP automatique (ATR) |
+| `/maxspread 3` | Change le spread maximum accepté |
+| `/confluence 30` | Change le score de confluence minimum |
+| `/help` | Rappel de toutes les commandes |
+
+Chaque instance de l'EA (or, BTC…) a son propre magic number : si tu
+utilises **le même bot Telegram** pour les deux graphiques, chaque
+commande est exécutée par chaque instance sur SON symbole (un `/close`
+ferme l'or ET le BTC). Pour les contrôler séparément, crée **deux bots**
+via @BotFather (un token par graphique).
 
 ⚠️ **Important** : le bot vit dans le terminal MT5 de ton **PC**. Si le
 PC s'éteint ou MT5 se ferme, le bot s'arrête (les SL/TP des positions

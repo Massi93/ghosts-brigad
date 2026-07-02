@@ -230,6 +230,17 @@ AccountCostProfile gCostProfile;
 ExitParams         gExitParams;
 ConfluenceConfig   gConfluence;
 
+// Runtime state, adjustable live from Telegram (/risk, /sl, /pause...)
+bool   gRtPaused        = false;
+double gRtRiskPercent;
+bool   gRtUseATR;
+double gRtFixedSL, gRtFixedTP;
+double gRtMaxSpread;
+double gRtConfluenceMin;
+
+// Telegram remote control (needs the inputs & globals above)
+#include "Utils/TelegramControl.mqh"
+
 //==================================================================
 //  EA INITIALIZATION
 //==================================================================
@@ -287,13 +298,34 @@ int OnInit()
          " | Sentinel: ", (InpUseSentinel ? "ON" : "OFF"),
          " | Confluence: ", (InpUseConfluence ? "ON" : "OFF"));
 
+   // Runtime state (modifiable en direct depuis Telegram)
+   gRtRiskPercent   = InpRiskPercent;
+   gRtUseATR        = InpUseATRSLTP;
+   gRtFixedSL       = InpFixedSLPips;
+   gRtFixedTP       = InpFixedTPPips;
+   gRtMaxSpread     = InpMaxSpreadPips;
+   gRtConfluenceMin = InpConfluenceMin;
+
    // Notifications sortantes (app mobile MT5 / Telegram)
    Notifier_Init(InpNotifyPush, InpTgToken, InpTgChatID);
    if(InpNotifyPush || StringLen(InpTgToken) > 0)
       Notify("GhostsBrigad demarre sur " + gSymbol + " | " +
-             Cost_Summary(gSymbol, gCostProfile));
+             Cost_Summary(gSymbol, gCostProfile) +
+             (StringLen(InpTgChatID) > 0 ? " | Envoie /help pour les commandes" : ""));
+
+   // Telegram command polling every 3 seconds
+   if(StringLen(InpTgToken) > 0 && StringLen(InpTgChatID) > 0)
+      EventSetTimer(3);
 
    return INIT_SUCCEEDED;
+}
+
+//==================================================================
+//  TIMER - poll Telegram for remote commands
+//==================================================================
+void OnTimer()
+{
+   TG_Poll();
 }
 
 //==================================================================
@@ -301,6 +333,7 @@ int OnInit()
 //==================================================================
 void OnDeinit(const int reason)
 {
+   EventKillTimer();
    Print("GhostsBrigad EA stopped. Reason: ", reason);
 }
 
@@ -316,6 +349,13 @@ void OnTick()
    if(!gTradingEnabled)      return;
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED)) return;
    if(!MQLInfoInteger(MQL_TRADE_ALLOWED)) return;
+
+   // Remote pause (/pause via Telegram): keep managing, no new entries
+   if(gRtPaused)
+   {
+      ManageOpenPositions();
+      return;
+   }
 
    // Friday close positions before weekend
    if(InpNoTradeOnFriday)
@@ -371,7 +411,7 @@ void OnTick()
    }
 
    // Spread filter (raw spread) + total cost filter (spread + commission)
-   if(!IsSpreadAcceptable(gSymbol, InpMaxSpreadPips) ||
+   if(!IsSpreadAcceptable(gSymbol, gRtMaxSpread) ||
       !Cost_IsSpreadAcceptable(gSymbol, gCostProfile, InpMaxTotalCostPips))
    {
       ManageOpenPositions();
@@ -442,7 +482,7 @@ void OnTick()
    {
       string confLog;
       if(!Confluence_AllowTrade(gSymbol, InpTimeframe, gConfluence,
-                                signal, InpConfluenceMin,
+                                signal, gRtConfluenceMin,
                                 InpConfluenceMinN, confLog))
       {
          Print("Trade vetoed by confluence | Direction: ", signal, " | ", confLog);
@@ -456,25 +496,25 @@ void OnTick()
    ENUM_ORDER_TYPE orderType = (signal == 1) ? ORDER_TYPE_BUY : ORDER_TYPE_SELL;
    double sl, tp;
 
-   if(InpUseATRSLTP)
+   if(gRtUseATR)
    {
       sl = GetATRSLPrice(gSymbol, InpTimeframe, orderType, InpATRPeriod, InpATRSLMult);
       tp = GetATRTPPrice(gSymbol, InpTimeframe, orderType, InpATRPeriod, InpATRTPMult);
    }
    else
    {
-      sl = GetSLPrice(gSymbol, orderType, InpFixedSLPips);
-      tp = GetTPPrice(gSymbol, orderType, InpFixedTPPips);
+      sl = GetSLPrice(gSymbol, orderType, gRtFixedSL);
+      tp = GetTPPrice(gSymbol, orderType, gRtFixedTP);
    }
 
    // Calculate SL/TP distances in pips
    double pipSize = SymbolInfoDouble(gSymbol, SYMBOL_POINT) * 10;
-   double slPips  = InpUseATRSLTP
+   double slPips  = gRtUseATR
       ? (ATR(gSymbol, InpTimeframe, InpATRPeriod) * InpATRSLMult) / pipSize
-      : InpFixedSLPips;
-   double tpPips  = InpUseATRSLTP
+      : gRtFixedSL;
+   double tpPips  = gRtUseATR
       ? (ATR(gSymbol, InpTimeframe, InpATRPeriod) * InpATRTPMult) / pipSize
-      : InpFixedTPPips;
+      : gRtFixedTP;
 
    // Cost viability: skip trades whose TP does not clear the total
    // round-trip cost (spread + commission) by a safe multiple.
@@ -490,8 +530,8 @@ void OnTick()
    // Calculate lot size (commission included in risked amount).
    // Adaptive risk shrinks position size during a losing streak.
    double effRisk = InpUseAdaptiveRisk
-      ? Scalp_AdaptiveRiskPercent(gSymbol, InpMagicNumber, InpRiskPercent)
-      : InpRiskPercent;
+      ? Scalp_AdaptiveRiskPercent(gSymbol, InpMagicNumber, gRtRiskPercent)
+      : gRtRiskPercent;
 
    double lot;
    if(InpUseMartingale)
