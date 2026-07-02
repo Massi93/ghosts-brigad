@@ -1,4 +1,7 @@
 ; GhostsBrigad EA v2.0 - Preset scalping BTCUSD M5
+; ATTENTION : backtest 12 mois (07/2025-06/2026) NEGATIF avec ces reglages
+; (PF 0.78, -16.7%). Voir backtest/RESULTS-2026-07-02.md avant toute
+; utilisation. Pistes : M15/M30, ADX plus strict, ou eviter le BTC.
 ; Rappel echelle : sur BTCUSD Exness, 1 "pip" du bot = 0.10 USD
 ; -> le spread BTC (~15-25 USD) = 150-250 pips, l'ATR M5 = 1500-4000 pips.
 ; Les valeurs en pips ci-dessous sont donc volontairement grandes.
