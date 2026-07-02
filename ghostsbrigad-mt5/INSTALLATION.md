@@ -14,8 +14,11 @@ Durée : ~15 minutes (+ Sentinel en option, ~15 minutes de plus).
 
 ## Étape 2 — Copier les fichiers dans MetaTrader 5
 
-> ⚡ **Raccourci** : double-clique **INSTALL.bat** à la racine du ZIP —
+> ⚡ **Raccourci Windows** : double-clique **INSTALL.bat** à la racine du ZIP —
 > il copie tout ET compile automatiquement (étapes 2 et 3 faites pour toi).
+> **Sur Mac** : clic droit sur **INSTALL_MAC.command** → Ouvrir (il copie
+> tout ; la compilation reste F4 puis F7). Pour un bot 24h/24, préfère un
+> **VPS Windows** piloté depuis le Mac avec Microsoft Remote Desktop.
 
 1. Ouvre **MT5** (connecté à ton compte Exness)
 2. Menu **Fichier → Ouvrir le dossier des données**
