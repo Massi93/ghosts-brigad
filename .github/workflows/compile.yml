@@ -1,0 +1,53 @@
+name: Compile EA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [BrigadBot]
+    paths:
+      - "ghostsbrigad-mt5/Experts/**/*.mq5"
+      - "ghostsbrigad-mt5/Experts/**/*.mqh"
+      - ".github/workflows/compile.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  compile:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer MetaTrader 5
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe" -OutFile mt5setup.exe
+          Start-Process .\mt5setup.exe -ArgumentList "/auto" -Wait
+          Start-Sleep -Seconds 20
+          if (-not (Test-Path "C:\Program Files\MetaTrader 5\metaeditor64.exe")) { throw "MetaEditor introuvable apres installation" }
+
+      - name: Compiler GhostsBrigad_EA
+        shell: pwsh
+        run: |
+          $mt5 = "C:\Program Files\MetaTrader 5"
+          Copy-Item "ghostsbrigad-mt5\Experts\GhostsBrigad" "$mt5\MQL5\Experts\" -Recurse -Force
+          $ea = "$mt5\MQL5\Experts\GhostsBrigad\GhostsBrigad_EA.mq5"
+          Start-Process "$mt5\metaeditor64.exe" -ArgumentList "/compile:`"$ea`"","/log:compile.log" -Wait
+          if (Test-Path compile.log) { Get-Content compile.log -Encoding Unicode }
+          $ex5 = "$mt5\MQL5\Experts\GhostsBrigad\GhostsBrigad_EA.ex5"
+          if (-not (Test-Path $ex5)) { Write-Error "Compilation echouee"; exit 1 }
+          Copy-Item $ex5 "ghostsbrigad-mt5\Experts\GhostsBrigad\"
+          Write-Host "Compilation reussie : GhostsBrigad_EA.ex5 genere"
+
+      - name: Publier le .ex5 compile sur la branche
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f ghostsbrigad-mt5/Experts/GhostsBrigad/GhostsBrigad_EA.ex5
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "EA compile automatiquement (.ex5 pret a l'emploi) [skip ci]"
+            git push
+          } else { Write-Host "ex5 inchange" }
