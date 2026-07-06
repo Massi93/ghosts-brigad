@@ -14,7 +14,6 @@
 //|                     available approximation.)                    |
 //| Score in [-100, +100].                                           |
 //+------------------------------------------------------------------+
-#pragma once
 
 //==================================================================
 //  VWAP (session, from day start, tick-volume weighted)

@@ -8,7 +8,6 @@
 //|                        close back inside (reversal signature)    |
 //| Score in [-100, +100].                                           |
 //+------------------------------------------------------------------+
-#pragma once
 
 //--- Break of Structure: close beyond the most recent swing high/low.
 //    Same direction as prior trend = BOS (continuation);

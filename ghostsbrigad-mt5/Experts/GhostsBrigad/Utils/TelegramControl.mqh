@@ -11,7 +11,6 @@
 //| NOTE: this file must be #included AFTER the EA's inputs and      |
 //| global variables (it references them directly).                  |
 //+------------------------------------------------------------------+
-#pragma once
 
 //--- offset persisted so a restart never replays old commands
 string TG_OffsetKey() { return "GB_TG_OFFSET_" + (string)InpMagicNumber; }

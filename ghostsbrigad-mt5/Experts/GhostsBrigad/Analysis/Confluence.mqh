@@ -6,7 +6,6 @@
 //| trade when the confluence agrees with the technical signal:      |
 //|   buy needs score >= +threshold, sell needs score <= -threshold. |
 //+------------------------------------------------------------------+
-#pragma once
 
 #include "MarketStructure.mqh"
 #include "SMC.mqh"

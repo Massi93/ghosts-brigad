@@ -4,7 +4,6 @@
 //| Signal: Price touches/crosses BB bands with RSI confirmation    |
 //| Modes:  Reversal (bounce off bands) | Breakout (band squeeze)   |
 //+------------------------------------------------------------------+
-#pragma once
 
 enum BB_MODE { BB_REVERSAL = 0, BB_BREAKOUT = 1 };
 

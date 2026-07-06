@@ -9,7 +9,6 @@
 //|   - Sentiment-flip exit: close winners when the news turns      |
 //|   - Pre-news flat: close before high-impact announcements       |
 //+------------------------------------------------------------------+
-#pragma once
 
 struct ExitParams
 {

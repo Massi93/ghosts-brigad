@@ -1,7 +1,6 @@
 //+------------------------------------------------------------------+
 //| TradeUtils.mqh - Trade utility functions for GhostsBrigad EA    |
 //+------------------------------------------------------------------+
-#pragma once
 
 #include <Trade\Trade.mqh>
 #include <Trade\PositionInfo.mqh>

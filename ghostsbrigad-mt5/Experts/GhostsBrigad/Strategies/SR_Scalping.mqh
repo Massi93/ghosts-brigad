@@ -4,7 +4,6 @@
 //| Signal: Price reacts at dynamic S/R levels with PA confirmation |
 //| Levels: Pivot points + recent swing highs/lows                  |
 //+------------------------------------------------------------------+
-#pragma once
 
 struct SRLevels
 {

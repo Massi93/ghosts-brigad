@@ -9,7 +9,6 @@
 //|   - Raw Spread               : spread ~0 + fixed commission/lot |
 //|   - Zero                     : 0 spread on majors + commission  |
 //+------------------------------------------------------------------+
-#pragma once
 
 enum ENUM_ACCOUNT_TYPE
 {

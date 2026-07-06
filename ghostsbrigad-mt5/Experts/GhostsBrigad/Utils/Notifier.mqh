@@ -10,7 +10,6 @@
 //|     Advisors > Allow WebRequest for listed URL)                 |
 //| Failures are logged once and never block trading.               |
 //+------------------------------------------------------------------+
-#pragma once
 
 bool   gNotifyPush       = false;
 string gNotifyTgToken    = "";

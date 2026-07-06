@@ -1,7 +1,6 @@
 //+------------------------------------------------------------------+
 //| Indicators.mqh - Indicator helper wrappers for GhostsBrigad EA  |
 //+------------------------------------------------------------------+
-#pragma once
 
 //--- EMA value at shift
 double EMA(string symbol, ENUM_TIMEFRAMES tf, int period, int shift = 0)

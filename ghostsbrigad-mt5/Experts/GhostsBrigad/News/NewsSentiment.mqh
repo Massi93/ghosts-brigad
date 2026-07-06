@@ -13,7 +13,6 @@
 //|   S,EURUSD,0.42,0.80,17          <- symbol,score,confidence,msgs|
 //|   B,1719931800,1719933600,USD,HIGH,Non-Farm Payrolls            |
 //+------------------------------------------------------------------+
-#pragma once
 
 #define SENTINEL_FILE      "ghostsbrigad_sentinel.txt"
 #define SENTINEL_MAX_ROWS  128

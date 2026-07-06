@@ -16,7 +16,6 @@
 //|   - Adaptive risk     : half size after 2 straight losses,      |
 //|     back to full size after a win (anti-martingale).            |
 //+------------------------------------------------------------------+
-#pragma once
 
 //==================================================================
 //  VOLATILITY REGIME

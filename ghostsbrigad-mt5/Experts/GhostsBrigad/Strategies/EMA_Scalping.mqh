@@ -4,7 +4,6 @@
 //| Signal: Fast EMA crosses Slow EMA, confirmed by trend EMA       |
 //| Filter: ADX > threshold for trending market                     |
 //+------------------------------------------------------------------+
-#pragma once
 
 struct EMAScalpSignal { int direction; }; // 1=BUY, -1=SELL, 0=NONE
 

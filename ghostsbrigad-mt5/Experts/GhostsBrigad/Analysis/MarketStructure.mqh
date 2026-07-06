@@ -12,7 +12,6 @@
 //| Every method returns a score in [-100, +100]:                   |
 //| +100 = strongly bullish, -100 = strongly bearish, 0 = neutral.  |
 //+------------------------------------------------------------------+
-#pragma once
 
 #define MS_MAX_SWINGS 12
 

@@ -4,7 +4,6 @@
 //| Signal: RSI oversold/overbought with Stochastic confirmation    |
 //| Filter: Price near BB middle for consolidating markets          |
 //+------------------------------------------------------------------+
-#pragma once
 
 struct RSIScalpSignal { int direction; };
 

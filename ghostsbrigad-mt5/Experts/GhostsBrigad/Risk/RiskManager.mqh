@@ -1,7 +1,6 @@
 //+------------------------------------------------------------------+
 //| RiskManager.mqh - Risk & money management for GhostsBrigad EA   |
 //+------------------------------------------------------------------+
-#pragma once
 
 enum ENUM_LOT_MODE
 {

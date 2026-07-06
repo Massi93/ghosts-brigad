@@ -4,7 +4,6 @@
 //| Signal: MACD histogram flip + zero-line cross confirmation      |
 //| Filter: EMA trend filter to avoid counter-trend trades          |
 //+------------------------------------------------------------------+
-#pragma once
 
 struct MACDScalpSignal { int direction; };
 
