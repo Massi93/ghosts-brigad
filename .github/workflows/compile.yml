@@ -31,6 +31,15 @@ jobs:
         shell: pwsh
         run: |
           $mt5 = "C:\Program Files\MetaTrader 5"
+          # 1er lancement du terminal en mode portable : cree MQL5\Include
+          $t = Start-Process "$mt5\terminal64.exe" -ArgumentList "/portable" -PassThru
+          $deadline = (Get-Date).AddSeconds(120)
+          while (-not (Test-Path "$mt5\MQL5\Include\Trade\Trade.mqh") -and (Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+          }
+          Stop-Process -Id $t.Id -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 5
+          if (-not (Test-Path "$mt5\MQL5\Include\Trade\Trade.mqh")) { throw "Include standard absent apres 1er lancement" }
           # Chemins SANS espaces pour eviter tout probleme de quoting
           New-Item -ItemType Directory -Force -Path "C:\build\MQL5\Experts" | Out-Null
           Copy-Item "ghostsbrigad-mt5\Experts\GhostsBrigad" "C:\build\MQL5\Experts\GhostsBrigad" -Recurse -Force
