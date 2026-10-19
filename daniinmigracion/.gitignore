@@ -7,3 +7,4 @@ dist
 # Live : configuration locale et données (base, enregistrements, emails de test)
 .env
 storage/
+dist-demo

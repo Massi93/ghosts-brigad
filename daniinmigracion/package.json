@@ -12,7 +12,8 @@
     "build": "vite build",
     "start": "node server/index.js --prod",
     "preview": "vite build && node server/index.js --prod",
-    "cockpit:password": "node server/scripts/set-password.js"
+    "cockpit:password": "node server/scripts/set-password.js",
+    "build:demo": "vite build --config vite.demo.config.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

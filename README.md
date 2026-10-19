@@ -158,6 +158,21 @@ Vidéo : **WebRTC en « mesh »**. Le navigateur de Dani envoie le flux directem
   - les demandes de renégociation vidéo sont limitées.
 - Export CSV protégé contre l'injection de formules Excel. IP des viewers masquées dans le cockpit (`81.23.x.x`).
 
+### Démo autonome (sans serveur)
+
+```bash
+npm run build:demo   # → dist-demo/demo.html (un seul fichier, à ouvrir dans un navigateur)
+```
+
+Les vrais composants du site, de la page `/live` et du cockpit tournent avec un serveur simulé dans le navigateur (`src/demo/`). Seuls l'accès réseau, la navigation et la réception vidéo sont remplacés.
+
+- Les viewers et les cœurs sont simulés, et un live est programmé dans 4 min 30.
+- Les emails apparaissent dans une boîte d'envoi locale.
+- La webcam est remplacée par une caméra simulée si le navigateur la refuse.
+- Rien n'est conservé : recharger la page remet la démo à zéro.
+
+`dist-demo/artifact.html` est la même démo, au format d'une page Claude.
+
 ### Limites à connaître
 
 - **Nombre de viewers** : en mesh, Dani envoie un flux par viewer (environ 1,5 Mbit/s chacun en montée). C'est confortable jusqu'à une vingtaine de viewers avec une bonne connexion (plafond réglable : `MAX_VIEWERS`). Au-delà, il faudra un serveur média (SFU : LiveKit, mediasoup…).

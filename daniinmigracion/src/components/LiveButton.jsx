@@ -1,6 +1,7 @@
 import { Play } from "lucide-react";
 import { livePhase, useLiveStatus } from "../lib/liveStatus";
 import { formatCountdown, formatLiveDate, useNow } from "../lib/time";
+import { navigate } from "../lib/nav";
 
 /**
  * Bouton « LIVE » rouge clignotant, affiché dès qu'un live est programmé.
@@ -20,7 +21,7 @@ export default function LiveButton() {
 
   const onClick = () => {
     if (active) {
-      window.location.assign("/live");
+      navigate("/live");
       return;
     }
     document.getElementById("proximo-live")?.scrollIntoView({ behavior: "smooth" });

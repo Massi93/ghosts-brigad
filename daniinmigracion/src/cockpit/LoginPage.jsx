@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, Globe2, LockKeyhole, LogIn } from "lucide-react";
 import { api } from "../lib/api";
+import { currentSearch, navigate } from "../lib/nav";
 import { Button, inputClass } from "./ui";
 
 /** Destination après connexion (uniquement une page du cockpit : pas de redirection ouverte). */
 function nextUrl() {
-  const next = new URLSearchParams(window.location.search).get("next");
+  const next = new URLSearchParams(currentSearch()).get("next");
   return next && /^\/cockpit(\/|$|\?|#)/.test(next) && !next.startsWith("/cockpit/login") ? next : "/cockpit";
 }
 
@@ -26,7 +27,7 @@ export default function LoginPage() {
     setError("");
     try {
       await api("/auth/login", { method: "POST", body: { username, password } });
-      window.location.replace(nextUrl());
+      navigate(nextUrl(), { replace: true });
     } catch (err) {
       setError(err.message);
       setLoading(false);

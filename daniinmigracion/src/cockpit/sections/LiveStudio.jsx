@@ -329,7 +329,8 @@ export default function LiveStudio() {
         ) : (
           <ul className="divide-y divide-white/5">
             {sortedViewers.map((v) => {
-              const peer = PEER_LABELS[b.peerStates[v.id]];
+              // État WebRTC vu par cet onglet, sinon celui fourni par le serveur (s'il en donne un).
+              const peer = PEER_LABELS[b.peerStates[v.id] ?? v.peerState];
               return (
                 <li key={v.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-sm">
                   <span className="text-xl" aria-hidden="true">

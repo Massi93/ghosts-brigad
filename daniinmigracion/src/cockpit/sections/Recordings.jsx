@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Download, Film, PlayCircle, Trash2, X } from "lucide-react";
-import { api } from "../../lib/api";
+import { api, apiFileUrl } from "../../lib/api";
 import { formatBytes, formatDateTime, formatDuration } from "../../lib/time";
 import { useCockpit } from "../CockpitContext";
 import { Badge, Button, Card, EmptyState, SectionTitle, useToast } from "../ui";
@@ -55,7 +55,7 @@ export default function Recordings() {
         <div className="grid gap-4 md:grid-cols-2">
           {recordings.map((r) => {
             const status = STATUS[r.status] ?? STATUS.ready;
-            const fileUrl = `/api/admin/recordings/${r.id}/file`;
+            const fileUrl = apiFileUrl(`/admin/recordings/${r.id}/file`);
             return (
               <Card key={r.id} className="flex flex-col gap-3">
                 {playing === r.id ? (
@@ -96,7 +96,7 @@ export default function Recordings() {
 
                 <div className="flex gap-2">
                   <a
-                    href={`${fileUrl}?download=1`}
+                    href={`/api/admin/recordings/${r.id}/file?download=1`}
                     className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold hover:bg-brand-400 ${
                       r.status === "ready" ? "" : "pointer-events-none opacity-50"
                     }`}

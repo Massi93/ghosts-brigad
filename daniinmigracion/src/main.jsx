@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import { LiveStatusProvider } from "./lib/liveStatus";
+import { currentPath } from "./lib/nav";
 import "./index.css";
 
 // Pages chargées à la demande : le site public ne télécharge pas le code du cockpit.
@@ -10,7 +11,7 @@ const CockpitApp = lazy(() => import("./cockpit/CockpitApp.jsx"));
 
 /** Routage minimal par chemin (le site reste une page unique avec ancres). */
 function Root() {
-  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  const path = currentPath().replace(/\/+$/, "") || "/";
 
   if (path === "/cockpit" || path.startsWith("/cockpit/")) {
     return <CockpitApp />;

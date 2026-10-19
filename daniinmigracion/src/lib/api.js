@@ -18,6 +18,11 @@ export function setUnauthorizedHandler(handler) {
   unauthorizedHandler = handler;
 }
 
+/** URL d'un fichier servi par l'API (ex. une vidéo enregistrée). */
+export function apiFileUrl(path) {
+  return `/api${path}`;
+}
+
 /**
  * Appelle l'API et retourne le JSON. Lève `ApiError` si le statut n'est pas 2xx.
  * @param {string} path  chemin après /api (ex. "/admin/lives")

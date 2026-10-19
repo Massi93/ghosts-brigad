@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { api, setUnauthorizedHandler } from "../lib/api";
+import { currentPath, navigate } from "../lib/nav";
 import { formatDuration, useNow } from "../lib/time";
 import LoginPage from "./LoginPage";
 import { CockpitProvider, useCockpit } from "./CockpitContext";
@@ -34,12 +35,12 @@ const SECTIONS = [
 ];
 
 function goToLogin() {
-  const next = encodeURIComponent(window.location.pathname + window.location.hash);
-  window.location.replace(`/cockpit/login?next=${next}`);
+  const next = encodeURIComponent(currentPath() + window.location.hash);
+  navigate(`/cockpit/login?next=${next}`, { replace: true });
 }
 
 export default function CockpitApp() {
-  const path = window.location.pathname.replace(/\/+$/, "");
+  const path = currentPath().replace(/\/+$/, "");
   if (path === "/cockpit/login") return <LoginPage />;
   return <AuthGate />;
 }
@@ -94,7 +95,7 @@ function Dashboard({ admin }) {
 
   const logout = async () => {
     await api("/auth/logout", { method: "POST" }).catch(() => {});
-    window.location.replace("/cockpit/login");
+    navigate("/cockpit/login", { replace: true });
   };
 
   useEffect(() => {

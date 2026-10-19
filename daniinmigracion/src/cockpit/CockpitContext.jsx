@@ -6,6 +6,7 @@
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { navigate } from "../lib/nav";
 import { createCockpitSocket } from "../lib/socket";
 import { useBroadcaster } from "./useBroadcaster";
 
@@ -47,14 +48,14 @@ export function CockpitProvider({ children }) {
           api("/auth/me")
             .then(() => socket.connect())
             .catch((err) => {
-              if (err.status === 401) window.location.replace("/cockpit/login?next=/cockpit");
+              if (err.status === 401) navigate("/cockpit/login?next=/cockpit", { replace: true });
               else socket.connect();
             });
         }, 1000);
       }
     };
     const onConnectError = (err) => {
-      if (err.message === "unauthorized") window.location.replace("/cockpit/login?next=/cockpit");
+      if (err.message === "unauthorized") navigate("/cockpit/login?next=/cockpit", { replace: true });
     };
 
     socket.on("cockpit:state", onState);
