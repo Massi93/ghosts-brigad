@@ -58,6 +58,14 @@ function iceServers(value) {
     .map((urls) => ({ urls }));
 }
 
+/** Origines (« https://domaine ») séparées par des virgules. */
+function origins(value) {
+  return (value || "")
+    .split(",")
+    .map((o) => o.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+}
+
 const isProd = env.NODE_ENV === "production" || process.argv.includes("--prod");
 const port = int(env.PORT, 3000);
 const dataDir = path.resolve(ROOT_DIR, env.DATA_DIR || "storage");
@@ -69,6 +77,10 @@ export const config = {
   host: env.HOST || "localhost",
   publicUrl: (env.PUBLIC_URL || `http://localhost:${port}`).replace(/\/+$/, ""),
   trustProxy: bool(env.TRUST_PROXY, false),
+  // Site principal quand le Live tourne sur son propre sous-domaine (ex. live.daniinmigracion.com) :
+  // la racine « / » y redirige, et ce site peut appeler l'API publique (bouton LIVE, inscription).
+  mainSiteUrl: (env.MAIN_SITE_URL || "").replace(/\/+$/, ""),
+  allowedOrigins: [...new Set([...origins(env.ALLOWED_ORIGINS), ...origins(env.MAIN_SITE_URL)])],
 
   // Compte administrateur créé au premier démarrage (mot de passe stocké hashé).
   admin: {
@@ -113,10 +125,15 @@ export const config = {
   },
 
   // Fuseau horaire utilisé dans les emails (le site, lui, affiche l'heure locale du visiteur).
-  timezone: env.SITE_TIMEZONE || "America/New_York",
+  timezone: env.SITE_TIMEZONE || "Europe/Madrid",
 
   live: {
     iceServers: iceServers(env.ICE_SERVERS),
+    // Relais TURN de Cloudflare (optionnel) : voir server/live/iceServers.js.
+    cloudflareTurn: {
+      keyId: env.CLOUDFLARE_TURN_KEY_ID || "",
+      apiToken: env.CLOUDFLARE_TURN_API_TOKEN || "",
+    },
     // Diffusion en "mesh" WebRTC : chaque viewer reçoit un flux direct depuis le navigateur de Dani.
     maxViewers: Math.max(1, int(env.MAX_VIEWERS, 50)),
     // Connexions simultanées max depuis une même IP publique (anti-accaparement des places).

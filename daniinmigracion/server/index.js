@@ -17,7 +17,7 @@ import { config, ROOT_DIR } from "./config.js";
 import { openDatabase } from "./db/index.js";
 import { ensureDefaultAdmin, usesDocumentedPassword } from "./auth/admins.js";
 import { purgeExpiredSessions } from "./auth/sessions.js";
-import { cockpitPageGuard, loadSession, requireAdmin, sameOriginOnly } from "./auth/middleware.js";
+import { cockpitPageGuard, loadSession, publicCors, requireAdmin, sameOriginOnly } from "./auth/middleware.js";
 import { authRouter } from "./auth/routes.js";
 import { errorHandler } from "./lib/http.js";
 import { adminRouter } from "./admin/routes.js";
@@ -25,6 +25,7 @@ import { adminLiveRouter, publicLiveRouter } from "./live/routes.js";
 import { setupSockets } from "./live/sockets.js";
 import * as live from "./live/liveService.js";
 import { finishAllActive, recoverInterruptedRecordings, startIdleSweeper } from "./live/recordings.js";
+import { refreshIceServers } from "./live/iceServers.js";
 import { adminRegistrationsRouter, publicRegistrationsRouter } from "./registrations/routes.js";
 import { initMailer } from "./mail/mailer.js";
 import { mailEvents } from "./mail/notifications.js";
@@ -45,6 +46,7 @@ recoverInterruptedRecordings();
 startIdleSweeper();
 live.restoreAfterRestart();
 initMailer();
+refreshIceServers(); // relais TURN Cloudflare si configurés
 
 const app = express();
 app.disable("x-powered-by");
@@ -87,7 +89,7 @@ api.use((_req, res, next) => {
 });
 
 api.use("/auth", authRouter({ onLogout: (tokenHash) => sockets.disconnectSession(tokenHash) }));
-api.use("/public", publicLiveRouter(), publicRegistrationsRouter());
+api.use("/public", publicCors, publicLiveRouter(), publicRegistrationsRouter());
 api.use("/admin", requireAdmin, adminRouter(), adminLiveRouter(), adminRegistrationsRouter());
 api.use((_req, res) => res.status(404).json({ error: "No encontrado" }));
 api.use(errorHandler);
@@ -97,6 +99,11 @@ app.use("/api", api);
 
 // /cockpit → redirection vers /cockpit/login si la session est absente.
 app.use(cockpitPageGuard);
+
+// Live sur son propre sous-domaine : la page d'accueil est celle du site principal.
+if (config.mainSiteUrl) {
+  app.get(["/", "/index.html"], (_req, res) => res.redirect(302, `${config.mainSiteUrl}/`));
+}
 
 if (config.isProd) {
   const indexHtml = path.join(config.paths.dist, "index.html");

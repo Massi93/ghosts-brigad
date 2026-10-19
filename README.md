@@ -95,7 +95,7 @@ Règles des rappels automatiques (vérifiés toutes les 30 s, `REMINDER_CHECK_SE
 - Une personne ne reçoit jamais deux fois le même rappel, même si le serveur redémarre (index unique en base).
 - Si un live est reprogrammé, ses rappels repartent de zéro avec la nouvelle heure.
 - Les rappels passent devant un gros envoi manuel en cours, pour ne jamais arriver en retard.
-- Les dates des emails sont affichées dans le fuseau `SITE_TIMEZONE` (défaut `America/New_York`) ; le site, lui, affiche l'heure locale de chaque visiteur.
+- Les dates des emails sont affichées dans le fuseau `SITE_TIMEZONE` (défaut `Europe/Madrid`) ; le site, lui, affiche l'heure locale de chaque visiteur.
 
 ### Où sont stockées les données
 

@@ -15,6 +15,7 @@ import { config } from "../config.js";
 import { getSettings } from "../lib/settings.js";
 import { HttpError } from "../lib/http.js";
 import { describeDevice, locateIp, maskIp } from "../geo/geo.js";
+import { getIceServers } from "./iceServers.js";
 import {
   createLive,
   getActiveLive,
@@ -93,7 +94,7 @@ export function getCockpitState() {
     graceSeconds: config.live.graceSeconds,
     stats: getStats(),
     viewers: listViewers(),
-    iceServers: config.live.iceServers,
+    iceServers: getIceServers(),
     serverNow: Date.now(),
   };
 }

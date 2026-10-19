@@ -1,0 +1,62 @@
+# Render Blueprint : serveur du Live Dani Inmigración sur live.daniinmigracion.com
+# Render → New → Blueprint → dépôt ghosts-brigad. Les valeurs « sync: false »
+# sont demandées par Render à la création (mot de passe du cockpit, TURN, SMTP).
+services:
+  - type: web
+    name: dani-live
+    runtime: node
+    plan: starter            # toujours allumé (le plan gratuit s'endort et coupe les lives)
+    region: frankfurt        # le site et le public principal sont en Europe
+    branch: feature/live
+    rootDir: daniinmigracion
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/public/live
+    autoDeploy: true
+    disk:                    # base SQLite + enregistrements vidéo (≈ 1 Go par heure de live)
+      name: data
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PUBLIC_URL
+        value: https://live.daniinmigracion.com
+      - key: MAIN_SITE_URL
+        value: https://www.daniinmigracion.com
+      - key: ALLOWED_ORIGINS
+        value: https://daniinmigracion.com,https://www.daniinmigracion.com
+      - key: DATA_DIR
+        value: /var/data
+      - key: TRUST_PROXY
+        value: "true"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: SITE_TIMEZONE
+        value: Europe/Madrid
+      - key: ADMIN_PASSWORD     # mot de passe du cockpit (choisi à la création)
+        sync: false
+      - key: ICE_SERVERS
+        value: stun:stun.cloudflare.com:3478,stun:stun.l.google.com:19302
+      - key: CLOUDFLARE_TURN_KEY_ID
+        sync: false
+      - key: CLOUDFLARE_TURN_API_TOKEN
+        sync: false
+      - key: GEO_PROVIDER
+        value: ipapi
+      - key: MAIL_MODE          # passer à « smtp » une fois le fournisseur d'emails configuré
+        value: console
+      - key: MAIL_FROM
+        value: "Dani Inmigración <live@daniinmigracion.com>"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false

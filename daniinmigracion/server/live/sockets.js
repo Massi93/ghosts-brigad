@@ -11,9 +11,11 @@
  */
 import * as live from "./liveService.js";
 import { findSession, isSessionValid, tokenFromCookieHeader } from "../auth/sessions.js";
+import { isOwnOrigin } from "../auth/middleware.js";
 import { config } from "../config.js";
 import { clientIpFrom, HttpError } from "../lib/http.js";
 import { finishAllForLive, recordingEvents } from "./recordings.js";
+import { getIceServers } from "./iceServers.js";
 
 const HEARTS_FLUSH_MS = 250;
 const RETRY_MIN_INTERVAL_MS = 5000; // un viewer ne peut redemander une offre qu'une fois toutes les 5 s
@@ -102,7 +104,7 @@ export function setupSockets(io) {
     socket.on("viewer:join", (_payload, ack) => {
       const reply = typeof ack === "function" ? ack : () => {};
       // Déjà dans la salle : on ne redéclenche pas de négociation WebRTC.
-      if (live.isViewer(socket.id)) return reply({ ok: true, iceServers: config.live.iceServers });
+      if (live.isViewer(socket.id)) return reply({ ok: true, iceServers: getIceServers() });
 
       const blocker = live.joinBlocker();
       if (blocker) return reply({ ok: false, reason: blocker });
@@ -112,7 +114,7 @@ export function setupSockets(io) {
       if (result !== "ok") return reply({ ok: false, reason: result });
 
       socket.join("viewers");
-      reply({ ok: true, iceServers: config.live.iceServers });
+      reply({ ok: true, iceServers: getIceServers() });
 
       // Si Dani diffuse déjà, on lui demande d'ouvrir une connexion vers ce viewer.
       const broadcaster = live.getBroadcasterSocketId();
@@ -167,6 +169,10 @@ export function setupSockets(io) {
 
   // Authentification par le cookie de session (même cookie que l'API).
   cockpit.use((socket, next) => {
+    // Le cookie est aussi envoyé depuis les autres sous-domaines (même site) :
+    // seule une page du serveur lui-même peut ouvrir le cockpit.
+    const origin = socket.handshake.headers.origin;
+    if (origin && !isOwnOrigin(origin, socket.handshake.headers.host)) return next(new Error("unauthorized"));
     const session = findSession(tokenFromCookieHeader(socket.request.headers.cookie));
     if (!session) return next(new Error("unauthorized"));
     socket.data.session = session;

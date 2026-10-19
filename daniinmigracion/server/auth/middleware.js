@@ -18,25 +18,44 @@ export function requireAdmin(req, res, next) {
   next();
 }
 
+/** L'origine (en-tête Origin) est-elle ce serveur lui-même ? */
+export function isOwnOrigin(origin, requestHost) {
+  try {
+    const { host } = new URL(origin);
+    return host === requestHost || host === new URL(config.publicUrl).host;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Protection CSRF complémentaire au cookie SameSite=Strict :
  * toute requête qui modifie des données doit venir de la même origine.
+ * Exception : le site principal (ALLOWED_ORIGINS) peut utiliser l'API publique
+ * (/public : inscription), jamais l'API du cockpit.
  */
 export function sameOriginOnly(req, res, next) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
   const origin = req.headers.origin;
-  if (origin) {
-    let host;
-    try {
-      host = new URL(origin).host;
-    } catch {
-      host = null;
-    }
-    const allowed = new Set([req.headers.host, new URL(config.publicUrl).host]);
-    if (!host || !allowed.has(host)) {
-      return res.status(403).json({ error: "Origen no permitido", code: "bad_origin" });
-    }
+  if (!origin || isOwnOrigin(origin, req.headers.host)) return next();
+  if (req.path.startsWith("/public/") && config.allowedOrigins.includes(origin)) return next();
+  return res.status(403).json({ error: "Origen no permitido", code: "bad_origin" });
+}
+
+/**
+ * CORS de l'API publique pour le site principal (lecture de l'état du live,
+ * inscription). Aucun cookie n'est accepté en cross-origin.
+ */
+export function publicCors(req, res, next) {
+  const origin = req.headers.origin;
+  if (origin && config.allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Max-Age", "600");
   }
+  if (req.method === "OPTIONS") return res.status(204).end();
   next();
 }
 
