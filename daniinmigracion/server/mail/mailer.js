@@ -71,18 +71,33 @@ async function runQueue() {
 
 /**
  * Ajoute un email à la file et attend son envoi.
- * @param {{ to: string, subject: string, html: string, text: string }} message
+ * @param {{ to: string, subject: string, html: string, text: string, unsubscribeUrl?: string }} message
+ * @param {{ priority?: boolean }} [options] `priority` : passe devant (rappels automatiques,
+ *   qui ne doivent pas attendre la fin d'un gros envoi manuel)
  */
-export function sendMail(message) {
+export function sendMail(message, { priority = false } = {}) {
   return new Promise((resolve, reject) => {
-    queue.push({ message, resolve, reject });
+    const job = { message, resolve, reject };
+    if (priority) queue.unshift(job);
+    else queue.push(job);
     runQueue();
   });
 }
 
-async function deliver({ to, subject, html, text }) {
+async function deliver({ to, subject, html, text, unsubscribeUrl }) {
   if (!transport) transport = createTransport();
-  const info = await transport.sendMail({ from: config.mail.from, to, subject, html, text });
+  const info = await transport.sendMail({
+    from: config.mail.from,
+    to,
+    subject,
+    html,
+    text,
+    // Bouton « Se désabonner » natif de Gmail / Outlook (désinscription en un clic, RFC 8058).
+    ...(unsubscribeUrl && {
+      list: { unsubscribe: { url: unsubscribeUrl } },
+      headers: { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+    }),
+  });
 
   if (config.mail.mode === "console") {
     fs.mkdirSync(config.paths.mails, { recursive: true });

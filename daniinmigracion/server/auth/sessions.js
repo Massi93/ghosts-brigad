@@ -44,6 +44,12 @@ export function findSession(token) {
   return { tokenHash, admin: { id: row.admin_id, username: row.username } };
 }
 
+/** Vérifie qu'une session (identifiée par le hash du jeton) existe et n'a pas expiré. */
+export function isSessionValid(tokenHash) {
+  const row = db.prepare("SELECT expires_at FROM sessions WHERE token_hash = ?").get(tokenHash);
+  return Boolean(row) && new Date(row.expires_at).getTime() > Date.now();
+}
+
 export function deleteSession(tokenHash) {
   db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash);
 }

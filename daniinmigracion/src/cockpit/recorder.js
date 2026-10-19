@@ -8,7 +8,8 @@
 import { api, ApiError } from "../lib/api";
 
 const TIMESLICE_MS = 2000;
-const MAX_RETRIES = 4;
+const MAX_RETRY_DELAY_MS = 5000;
+const RETRIES_WHEN_STOPPING = 4; // à l'arrêt, on n'attend pas indéfiniment un serveur absent
 
 // Par ordre de préférence : VP8 est le moins gourmand en CPU (la caméra
 // est déjà encodée une fois par viewer), MP4 pour Safari.
@@ -32,11 +33,15 @@ export class ChunkedRecorder {
    * @param {MediaStream} stream
    * @param {number} liveId
    * @param {(info: { status: string, bytes: number, id: number|null, error?: string }) => void} onUpdate
+   * @param {() => void} [onLost] appelé si le serveur a fermé ce fichier (redémarrage, longue
+   *   coupure…) : l'appelant démarre alors un nouveau segment d'enregistrement.
    */
-  constructor(stream, liveId, onUpdate = () => {}) {
+  constructor(stream, liveId, onUpdate = () => {}, onLost = () => {}) {
     this.stream = stream;
     this.liveId = liveId;
     this.onUpdate = onUpdate;
+    this.onLost = onLost;
+    this.stopping = false;
     this.id = null;
     this.seq = 0;
     this.bytes = 0;
@@ -84,39 +89,61 @@ export class ChunkedRecorder {
     this.queue = this.queue.then(() => this.upload(seq, blob));
   }
 
+  fail(message) {
+    this.failed = true;
+    this.status = "error";
+    this.emit({ error: message });
+  }
+
   async upload(seq, blob) {
     if (this.failed) return;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    for (let attempt = 0; ; attempt += 1) {
       try {
         const res = await api(`/admin/recordings/${this.id}/chunks?seq=${seq}`, {
           method: "POST",
           body: blob,
         });
         this.bytes = res.bytes;
+        if (this.status === "retrying") this.status = "recording";
         this.emit();
         return;
       } catch (err) {
-        // Fichier fermé côté serveur : inutile de réessayer.
+        // Fichier fermé ou cassé côté serveur : ce segment est terminé.
         if (err instanceof ApiError && (err.status === 404 || err.status === 409)) {
-          this.failed = true;
-          this.status = "error";
-          this.emit({ error: err.message });
+          this.fail(err.message);
+          if (!this.stopping) this.onLost();
           return;
         }
-        if (attempt === MAX_RETRIES) {
-          this.failed = true;
-          this.status = "error";
-          this.emit({ error: "No se pudo subir la grabación" });
+        // Autre refus définitif (session expirée…).
+        if (err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 429) {
+          this.fail(err.message);
           return;
         }
-        await sleep(500 * 2 ** attempt);
+        // Réseau coupé ou serveur indisponible : on réessaie tant que le live continue.
+        if (this.stopping && attempt >= RETRIES_WHEN_STOPPING) {
+          this.fail("No se pudo subir el final de la grabación");
+          return;
+        }
+        if (this.status === "recording") {
+          this.status = "retrying";
+          this.emit();
+        }
+        await sleep(Math.min(500 * 2 ** attempt, MAX_RETRY_DELAY_MS));
       }
     }
+  }
+
+  /** Abandonne ce segment sans le finaliser (le serveur l'a déjà fermé). */
+  abort() {
+    this.stopping = true;
+    this.failed = true;
+    if (this.recorder && this.recorder.state !== "inactive") this.recorder.stop();
   }
 
   /** Arrête l'enregistrement, attend la fin des envois et finalise le fichier. */
   async stop() {
     if (!this.recorder || this.status === "stopped") return;
+    this.stopping = true;
     const durationMs = Math.round(performance.now() - this.startedAt);
     if (this.recorder.state !== "inactive") {
       const stopped = new Promise((resolve) => {

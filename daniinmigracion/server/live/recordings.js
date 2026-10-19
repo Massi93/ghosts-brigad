@@ -20,8 +20,9 @@ export const recordingEvents = new EventEmitter();
 /** Enregistrements en cours : id -> { liveId, stream, nextSeq, bytes, startedAt, lastChunkAt } */
 const active = new Map();
 
-// Un enregistrement sans nouveau morceau depuis ce délai est finalisé automatiquement.
-const IDLE_TIMEOUT_MS = 60_000;
+// Un enregistrement sans nouveau morceau depuis ce délai est finalisé automatiquement
+// (onglet fermé sans arrêt propre). Aligné sur le délai de grâce d'un live interrompu.
+const IDLE_TIMEOUT_MS = 3 * 60_000;
 
 const ALLOWED_TYPES = [
   { prefix: "video/webm", ext: "webm" },
@@ -79,6 +80,12 @@ export function startRecording({ liveId, mimeType }) {
   const live = db.prepare("SELECT id, status FROM lives WHERE id = ?").get(liveId);
   if (!live || live.status !== "live") throw new HttpError(400, "No hay un live en curso");
 
+  // Un seul segment actif par live (une seule caméra diffuse à la fois) : le segment
+  // précédent (onglet rechargé, fermé ou repris ailleurs) est finalisé tout de suite.
+  for (const [otherId, rec] of active) {
+    if (rec.liveId === liveId) finishRecording(otherId).catch((err) => console.error("[rec]", err));
+  }
+
   const filename = `live-${liveId}-${stamp()}-${Math.random().toString(36).slice(2, 6)}.${type.ext}`;
   const file = path.join(dir(), filename);
   const stream = fs.createWriteStream(file, { flags: "wx" });
@@ -105,22 +112,35 @@ export function startRecording({ liveId, mimeType }) {
 
 /**
  * Ajoute un morceau. Les morceaux doivent arriver dans l'ordre (`seq` = 0, 1, 2…).
- * Un morceau déjà reçu (renvoi après une erreur réseau) est ignoré sans erreur.
+ * Un morceau déjà écrit (renvoi après une erreur réseau) est ignoré sans erreur.
+ * Après une erreur d'écriture (disque plein…), le fichier est marqué « cassé » et
+ * tous les morceaux suivants sont refusés : le navigateur démarre alors un nouveau segment.
  */
 export async function appendChunk(id, seq, buffer) {
   const rec = active.get(id);
   if (!rec) throw new HttpError(404, "Grabación cerrada", "recording_closed");
+  if (rec.broken) throw new HttpError(409, "Grabación interrumpida", "recording_broken");
   if (seq < rec.nextSeq) return { bytes: rec.bytes, duplicate: true };
-  if (seq > rec.nextSeq) {
+  if (seq > rec.nextSeq || rec.writing) {
     throw new HttpError(409, `Fragmento fuera de orden (esperado ${rec.nextSeq})`, "out_of_order");
   }
-  rec.nextSeq += 1;
-  rec.lastChunkAt = Date.now();
-  if (buffer.length > 0) {
-    await new Promise((resolve, reject) =>
-      rec.stream.write(buffer, (err) => (err ? reject(err) : resolve()))
-    );
+  rec.writing = true;
+  try {
+    if (buffer.length > 0) {
+      await new Promise((resolve, reject) =>
+        rec.stream.write(buffer, (err) => (err ? reject(err) : resolve()))
+      );
+    }
+    // Le morceau n'est compté qu'une fois réellement écrit sur le disque.
+    rec.nextSeq += 1;
     rec.bytes += buffer.length;
+    rec.lastChunkAt = Date.now();
+  } catch (err) {
+    rec.broken = true;
+    console.error(`[rec] Écriture impossible pour #${id} :`, err.message);
+    throw new HttpError(409, "No se pudo escribir la grabación", "recording_broken");
+  } finally {
+    rec.writing = false;
   }
   return { bytes: rec.bytes };
 }

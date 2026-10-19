@@ -76,7 +76,7 @@ export default function LiveStudio() {
   };
 
   const resume = async (takeover = false) => {
-    const ok = await b.goLive({ takeover });
+    const ok = await b.goLive({ liveId: live.id, resume: true, takeover });
     if (ok) toast("Transmisión reanudada");
   };
 
@@ -109,10 +109,14 @@ export default function LiveStudio() {
       <div className="mb-5 flex flex-col gap-3">
         {b.error && <Banner tone="danger" text={b.error} />}
         {b.revoked && <Banner tone="warning" text="Otra pestaña tomó el control de la transmisión." />}
-        {live && !broadcasterSocketId && !localLive && (
+        {live && !localLive && b.status !== "starting" && (!broadcasterSocketId || isBroadcasting) && (
           <Banner
             tone="warning"
-            text={`El live sigue abierto pero la cámara se desconectó. Se cerrará solo en ${formatDuration(Math.max(graceLeft, 0))} si no la reanudas.`}
+            text={
+              interruptedSince
+                ? `El live sigue abierto pero la cámara se desconectó. Se cerrará solo en ${formatDuration(Math.max(graceLeft, 0))} si no la reanudas.`
+                : "El live sigue abierto pero esta pestaña no está transmitiendo."
+            }
             actions={
               <>
                 <Button variant="danger" icon={Video} loading={b.status === "starting"} onClick={() => resume(false)}>
@@ -373,6 +377,9 @@ function Banner({ tone, text, actions }) {
 function RecordingBadge({ recording }) {
   if (recording.status === "error") {
     return <Badge tone="overlay" className="px-3 py-1 text-xs text-red-300">Grabación con error</Badge>;
+  }
+  if (recording.status === "retrying") {
+    return <Badge tone="overlay" className="px-3 py-1 text-xs text-amber-300">REC · reconectando…</Badge>;
   }
   if (recording.status === "saving") {
     return <Badge tone="overlay" className="px-3 py-1 text-xs">Guardando…</Badge>;

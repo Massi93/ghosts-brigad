@@ -27,25 +27,25 @@ function toDto(row) {
 }
 
 /**
- * Inscrit (ou met à jour) une personne.
- * Une même adresse ne crée qu'une seule ligne ; une personne désinscrite qui
- * se réinscrit est réactivée.
- * @returns {{ registration: object, shouldConfirm: boolean }}
- *   `shouldConfirm` : nouvelle inscription, réactivation ou inscription à un nouveau live.
+ * Inscrit une personne. Une même adresse ne crée qu'une seule ligne.
+ *
+ * Le formulaire public ne peut PAS modifier une inscription existante (nom, statut) :
+ * n'importe qui pourrait sinon saisir l'email d'un tiers. Une personne désinscrite
+ * reçoit un email avec un lien pour confirmer elle-même sa réinscription.
+ *
+ * @returns {{ registration: object, action: "confirm" | "resubscribe" | "none" }}
+ *   confirm     : nouvelle inscription, ou inscrit existant visant un nouveau live
+ *   resubscribe : adresse désinscrite → envoyer le lien de réinscription
  */
 export function upsertRegistration({ firstName, lastName, email, liveId }) {
   const existing = db.prepare("SELECT * FROM registrations WHERE email = ?").get(email);
   if (existing) {
-    const shouldConfirm =
-      Boolean(existing.unsubscribed_at) || (liveId != null && existing.live_id !== liveId);
-    db.prepare(
-      `UPDATE registrations
-          SET first_name = ?, last_name = ?, live_id = COALESCE(?, live_id), unsubscribed_at = NULL
-        WHERE id = ?`
-    ).run(firstName, lastName, liveId, existing.id);
+    if (existing.unsubscribed_at) return { registration: existing, action: "resubscribe" };
+    const newLive = liveId != null && existing.live_id !== liveId;
+    if (newLive) db.prepare("UPDATE registrations SET live_id = ? WHERE id = ?").run(liveId, existing.id);
     return {
       registration: db.prepare("SELECT * FROM registrations WHERE id = ?").get(existing.id),
-      shouldConfirm,
+      action: newLive ? "confirm" : "none",
     };
   }
   const token = crypto.randomBytes(24).toString("base64url");
@@ -57,7 +57,7 @@ export function upsertRegistration({ firstName, lastName, email, liveId }) {
     .run(firstName, lastName, email, liveId, token);
   return {
     registration: db.prepare("SELECT * FROM registrations WHERE id = ?").get(lastInsertRowid),
-    shouldConfirm: true,
+    action: "confirm",
   };
 }
 
@@ -84,11 +84,25 @@ export function deleteRegistration(id) {
   return db.prepare("DELETE FROM registrations WHERE id = ?").run(id).changes > 0;
 }
 
+export function findByToken(token) {
+  if (typeof token !== "string" || !token || token.length > 100) return null;
+  return db.prepare("SELECT * FROM registrations WHERE unsubscribe_token = ?").get(token) ?? null;
+}
+
+/** Désinscription (lien présent dans chaque email). */
 export function unsubscribeByToken(token) {
-  const row = db.prepare("SELECT * FROM registrations WHERE unsubscribe_token = ?").get(token);
-  if (!row) return null;
-  if (!row.unsubscribed_at) {
+  const row = findByToken(token);
+  if (row && !row.unsubscribed_at) {
     db.prepare("UPDATE registrations SET unsubscribed_at = ? WHERE id = ?").run(nowIso(), row.id);
+  }
+  return row;
+}
+
+/** Réinscription confirmée par la personne elle-même (lien reçu par email). */
+export function resubscribeByToken(token) {
+  const row = findByToken(token);
+  if (row && row.unsubscribed_at) {
+    db.prepare("UPDATE registrations SET unsubscribed_at = NULL WHERE id = ?").run(row.id);
   }
   return row;
 }

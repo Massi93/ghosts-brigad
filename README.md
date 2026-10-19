@@ -34,7 +34,7 @@ npm start        # sert la version compilée
   - réglages du site (afficher / masquer la rubrique « Próximo live », textes) et email de test.
 - **Site** : rubrique « Próximo live » avec formulaire d'inscription (nom, prénom, email), compte à rebours, et bouton **LIVE** rouge clignotant dans l'en-tête dès qu'un live est programmé. Pendant les 5 dernières minutes, un chronomètre 05:00 → 00:00 s'affiche à côté ; à 00:00 (ou dès que Dani est en direct), le bouton devient actif et ouvre `/live`.
 - **Page `/live`** : plein écran, mobile d'abord. Le viewer regarde seulement (ni chat, ni commentaires, ni micro). Il peut envoyer des « me gusta » : bouton cœur ou double-tap sur la vidéo. Les cœurs animés montent à l'écran façon TikTok, sont visibles par tous les viewers et comptés dans le cockpit.
-- **Emails automatiques** : confirmation à l'inscription, rappel **3 h avant** et **5 min avant** chaque live programmé, lien de désinscription dans chaque email.
+- **Emails automatiques** : confirmation à l'inscription, rappel **3 h avant** et **5 min avant** chaque live programmé. Chaque email contient un lien de désinscription, et Gmail / Outlook affichent leur bouton natif « Se désabonner ».
 
 L'interface publique et le cockpit sont en espagnol, comme le reste du site ; le code est commenté en français.
 
@@ -93,6 +93,8 @@ Règles des rappels automatiques (vérifiés toutes les 30 s, `REMINDER_CHECK_SE
 - **3 h avant** : envoyé aux inscrits arrivés avant l'ouverture de cette fenêtre. Ceux qui s'inscrivent après ont déjà reçu la confirmation avec la date. Si le live est programmé moins de 3 h à l'avance, l'email indique le temps réellement restant.
 - **5 min avant** : envoyé à tous les inscrits actifs.
 - Une personne ne reçoit jamais deux fois le même rappel, même si le serveur redémarre (index unique en base).
+- Si un live est reprogrammé, ses rappels repartent de zéro avec la nouvelle heure.
+- Les rappels passent devant un gros envoi manuel en cours, pour ne jamais arriver en retard.
 - Les dates des emails sont affichées dans le fuseau `SITE_TIMEZONE` (défaut `America/New_York`) ; le site, lui, affiche l'heure locale de chaque visiteur.
 
 ### Où sont stockées les données
@@ -106,6 +108,12 @@ Tout est dans `daniinmigracion/storage/`, ignoré par git (modifiable avec `DATA
 | `storage/mails/` | Emails générés en mode `console`. |
 
 L'enregistrement est envoyé au serveur par morceaux de 2 s pendant le live : même si l'onglet se ferme brutalement, tout ce qui a été reçu est conservé. À la fin, la durée est écrite dans l'en-tête du fichier WebM pour que la barre de progression fonctionne dans les lecteurs.
+
+Robustesse pendant un live :
+
+- **Coupure réseau** : les morceaux sont renvoyés jusqu'au retour de la connexion, et le cockpit reprend la diffusion de ce même live tout seul.
+- **Serveur redémarré** : la reprise est aussi automatique. L'enregistrement continue dans un nouveau segment.
+- **Onglet du cockpit fermé ou rechargé** : le live reste ouvert `LIVE_GRACE_SECONDS` (3 min par défaut), avec un bouton « Reanudar cámara ». Passé ce délai, il se termine seul.
 
 ### Architecture
 
@@ -136,7 +144,18 @@ Vidéo : **WebRTC en « mesh »**. Le navigateur de Dani envoie le flux directem
 
 - Mot de passe hashé avec **bcrypt** (12 tours) ; le compte est créé au premier démarrage.
 - Session : jeton aléatoire de 256 bits dans un cookie `HttpOnly` + `SameSite=Strict`, en plus `Secure` dès que le site est servi en HTTPS. La base ne stocke que le hash SHA-256 du jeton. Déconnexion = session supprimée.
-- Anti brute-force : 5 essais ratés par IP sur 15 min. Les requêtes d'une autre origine sont refusées. Le formulaire d'inscription est limité à 10 par IP et par heure, avec un champ piège anti-robots.
+- Session vérifiée à chaque action du cockpit, y compris en temps réel : après une déconnexion ou un changement de mot de passe, les connexions ouvertes sont coupées.
+- Anti brute-force : 5 essais par IP sur 15 min (comptés même en requêtes parallèles), et 4 vérifications de mot de passe simultanées au maximum. Les requêtes d'une autre origine sont refusées.
+- Un avertissement s'affiche au démarrage tant que le mot de passe par défaut n'a pas été changé.
+- Formulaire d'inscription :
+  - limité à 10 par IP et par heure, avec un champ piège anti-robots ;
+  - il ne peut pas modifier une inscription existante ;
+  - une adresse désinscrite reçoit un lien pour confirmer elle-même sa réinscription.
+- Désinscription en deux temps (page de confirmation) : les antivirus de messagerie qui ouvrent les liens automatiquement ne désinscrivent personne.
+- Viewers :
+  - la salle d'attente ouvre 1 h avant le live ;
+  - 5 connexions max par IP (`MAX_VIEWERS_PER_IP`) ;
+  - les demandes de renégociation vidéo sont limitées.
 - Export CSV protégé contre l'injection de formules Excel. IP des viewers masquées dans le cockpit (`81.23.x.x`).
 
 ### Limites à connaître

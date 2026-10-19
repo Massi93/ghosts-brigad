@@ -11,6 +11,8 @@ import { ChunkedRecorder } from "./recorder";
 
 // Débit vidéo max envoyé à chaque viewer (limite la bande passante montante de Dani).
 const MAX_VIDEO_BITRATE = 1_500_000;
+// Nombre max de nouveaux segments d'enregistrement ouverts automatiquement par live.
+const MAX_RECORDING_SEGMENTS = 20;
 
 const VIDEO_CONSTRAINTS = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
 const AUDIO_CONSTRAINTS = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
@@ -58,6 +60,10 @@ export function useBroadcaster(socket, iceServers) {
   const peers = useRef(new Map()); // viewerId -> { pc, sid, pending: [] }
   const recorderRef = useRef(null);
   const pendingViewers = useRef(new Set()); // viewers arrivés pendant le démarrage
+  const segmentsRef = useRef(0);
+  // Identifiant de cet onglet : après une coupure réseau, il reprend la diffusion
+  // sans « voler » celle d'un autre onglet.
+  const tabIdRef = useRef(randomId());
   const iceRef = useRef(iceServers);
   iceRef.current = iceServers;
 
@@ -243,17 +249,23 @@ export function useBroadcaster(socket, iceServers) {
       setStatusBoth("idle");
       setRevoked(true);
     };
-    // Reconnexion du socket pendant le direct : on se rattache au live.
+    // Reconnexion du socket pendant le direct : on reprend CE live (jamais un nouveau).
     const onReconnect = async () => {
       if (statusRef.current !== "live") return;
       try {
-        const res = await emitWithAck(socket, "broadcast:start", { takeover: true });
+        const res = await emitWithAck(socket, "broadcast:start", {
+          liveId: liveIdRef.current,
+          resume: true,
+          tabId: tabIdRef.current,
+        });
         for (const viewerId of res.viewerIds) {
           const state = peers.current.get(viewerId)?.pc.connectionState;
           if (state !== "connected" && state !== "connecting") connectViewer(viewerId);
         }
       } catch (err) {
-        setError(err.message);
+        // "ended" : le live s'est terminé pendant la coupure (CockpitContext libère la caméra).
+        if (err.code === "busy") onRevoked();
+        else if (err.code !== "ended") setError(err.message);
       }
     };
 
@@ -274,30 +286,56 @@ export function useBroadcaster(socket, iceServers) {
   /* --------------------------- Début / fin du live --------------------------- */
 
   /**
+   * Enregistrement automatique (un échec n'empêche pas le direct). Si le serveur
+   * ferme le fichier en cours (redémarrage, longue coupure), un nouveau segment
+   * démarre tout seul.
+   */
+  const startRecordingRef = useRef(null);
+  startRecordingRef.current = (media, liveId) => {
+    const recorder = new ChunkedRecorder(media, liveId, setRecording, () => {
+      if (recorderRef.current !== recorder) return;
+      recorder.abort();
+      if (segmentsRef.current >= MAX_RECORDING_SEGMENTS) return;
+      segmentsRef.current += 1;
+      setTimeout(() => {
+        if (statusRef.current === "live" && recorderRef.current === recorder) {
+          startRecordingRef.current(streamRef.current, liveIdRef.current);
+        }
+      }, 1000);
+    });
+    recorderRef.current = recorder;
+    recorder.start().catch((err) => setRecording({ status: "error", bytes: 0, id: null, error: err.message }));
+  };
+
+  /**
    * Passe en direct.
-   * @param {{ liveId?: number, title?: string, takeover?: boolean }} options
-   *   liveId : live programmé à démarrer ; title : live immédiat ; sans les deux : reprise.
+   * @param {{ liveId?: number, title?: string, resume?: boolean, takeover?: boolean }} options
+   *   liveId + title absent : live programmé à démarrer ; title : live immédiat ;
+   *   resume + liveId : reprise du live en cours (takeover : depuis un autre onglet).
    */
   const goLive = useCallback(
     async (options = {}) => {
+      // Un seul démarrage à la fois (double clic pendant la demande d'accès caméra).
+      if (["starting", "live", "stopping"].includes(statusRef.current)) return false;
       setError("");
       setRevoked(false);
-      const media = streamRef.current ?? (await startPreview());
-      if (!media) return false;
-
       setStatusBoth("starting");
+      const media = streamRef.current ?? (await startPreview());
+      if (!media) {
+        setStatusBoth("idle");
+        return false;
+      }
+
       try {
-        const res = await emitWithAck(socket, "broadcast:start", options);
+        const res = await emitWithAck(socket, "broadcast:start", { ...options, tabId: tabIdRef.current });
         liveIdRef.current = res.live.id;
         setStatusBoth("live");
         const viewerIds = new Set([...res.viewerIds, ...pendingViewers.current]);
         pendingViewers.current.clear();
         viewerIds.forEach((viewerId) => connectViewer(viewerId));
 
-        // Enregistrement automatique (un échec n'empêche pas le direct).
-        const recorder = new ChunkedRecorder(media, res.live.id, setRecording);
-        recorderRef.current = recorder;
-        recorder.start().catch((err) => setRecording({ status: "error", bytes: 0, id: null, error: err.message }));
+        segmentsRef.current = 0;
+        startRecordingRef.current(media, res.live.id);
         return true;
       } catch (err) {
         pendingViewers.current.clear();

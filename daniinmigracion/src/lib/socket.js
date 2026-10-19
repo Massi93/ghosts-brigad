@@ -25,7 +25,11 @@ export function emitWithAck(socket, event, payload) {
   return new Promise((resolve, reject) => {
     socket.timeout(10_000).emit(event, payload, (err, response) => {
       if (err) return reject(new Error("El servidor no responde"));
-      if (response?.error) return reject(new Error(response.error));
+      if (response?.error) {
+        const error = new Error(response.error);
+        error.code = response.code; // ex. "ended", "busy"
+        return reject(error);
+      }
       resolve(response);
     });
   });

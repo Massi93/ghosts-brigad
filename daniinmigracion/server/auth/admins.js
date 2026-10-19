@@ -41,6 +41,12 @@ export async function setAdminPassword(username, password) {
   ).run(username);
 }
 
+/** `true` si le compte utilise encore le mot de passe d'exemple de la documentation. */
+export async function usesDocumentedPassword(username = config.admin.username) {
+  const admin = db.prepare("SELECT password_hash FROM admins WHERE username = ?").get(username);
+  return admin ? bcrypt.compare("daniinmigracion", admin.password_hash) : false;
+}
+
 /** Vérifie des identifiants ; retourne l'admin ou `null`. */
 export async function verifyCredentials(username, password) {
   const admin = db

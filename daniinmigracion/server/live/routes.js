@@ -6,6 +6,7 @@
 import express, { Router } from "express";
 import { HttpError, optionalText, requireDate, requireId, requireString } from "../lib/http.js";
 import * as live from "./liveService.js";
+import { resetReminders } from "../mail/reminders.js";
 import {
   cancelLive,
   createLive,
@@ -72,15 +73,17 @@ export function adminLiveRouter() {
     if (!current || current.status !== "scheduled") {
       throw new HttpError(404, "Live programado no encontrado");
     }
+    const scheduledAt =
+      req.body?.scheduledAt === undefined ? current.scheduled_at : validateSchedule(req.body.scheduledAt);
     const row = updateScheduledLive(id, {
       title: requireString(req.body?.title ?? current.title, "título", { max: 120 }),
       description:
         req.body?.description === undefined
           ? current.description
           : optionalText(req.body.description, 1000),
-      scheduledAt:
-        req.body?.scheduledAt === undefined ? current.scheduled_at : validateSchedule(req.body.scheduledAt),
+      scheduledAt,
     });
+    if (scheduledAt !== current.scheduled_at) resetReminders(id);
     live.events.emit("status");
     res.json({ live: toAdminLive(row) });
   });

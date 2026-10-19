@@ -15,7 +15,7 @@ import { Server } from "socket.io";
 
 import { config, ROOT_DIR } from "./config.js";
 import { openDatabase } from "./db/index.js";
-import { ensureDefaultAdmin } from "./auth/admins.js";
+import { ensureDefaultAdmin, usesDocumentedPassword } from "./auth/admins.js";
 import { purgeExpiredSessions } from "./auth/sessions.js";
 import { cockpitPageGuard, loadSession, requireAdmin, sameOriginOnly } from "./auth/middleware.js";
 import { authRouter } from "./auth/routes.js";
@@ -34,6 +34,11 @@ import { startReminderScheduler } from "./mail/reminders.js";
 
 openDatabase();
 await ensureDefaultAdmin();
+if (await usesDocumentedPassword()) {
+  console.warn(
+    `[auth] ⚠️  Le cockpit utilise le mot de passe par défaut. Avant toute mise en ligne : npm run cockpit:password -- "nouveau-mot-de-passe"`
+  );
+}
 purgeExpiredSessions();
 setInterval(purgeExpiredSessions, 3600_000).unref();
 recoverInterruptedRecordings();
@@ -43,7 +48,8 @@ initMailer();
 
 const app = express();
 app.disable("x-powered-by");
-app.set("trust proxy", config.trustProxy);
+// Derrière un reverse proxy (TRUST_PROXY=true) : on fait confiance à un seul saut.
+app.set("trust proxy", config.trustProxy ? 1 : false);
 
 const server = http.createServer(app);
 const io = new Server(server, {

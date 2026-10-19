@@ -5,6 +5,7 @@
  * continue quand Dani navigue entre les sections du tableau de bord.
  */
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { api } from "../lib/api";
 import { createCockpitSocket } from "../lib/socket";
 import { useBroadcaster } from "./useBroadcaster";
 
@@ -38,7 +39,20 @@ export function CockpitProvider({ children }) {
     const onMail = (type) => (data) => mailListeners.current.forEach((fn) => fn(type, data));
     const onMailProgress = onMail("progress");
     const onMailDone = onMail("done");
-    const onDisconnect = () => setState((prev) => ({ ...prev, connected: false }));
+    const onDisconnect = (reason) => {
+      setState((prev) => ({ ...prev, connected: false }));
+      // Coupé par le serveur : session expirée → page de connexion ; sinon on se reconnecte.
+      if (reason === "io server disconnect") {
+        setTimeout(() => {
+          api("/auth/me")
+            .then(() => socket.connect())
+            .catch((err) => {
+              if (err.status === 401) window.location.replace("/cockpit/login?next=/cockpit");
+              else socket.connect();
+            });
+        }, 1000);
+      }
+    };
     const onConnectError = (err) => {
       if (err.message === "unauthorized") window.location.replace("/cockpit/login?next=/cockpit");
     };

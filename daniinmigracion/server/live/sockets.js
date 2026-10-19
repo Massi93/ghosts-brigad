@@ -10,12 +10,16 @@
  * (offre / réponse / candidats ICE). Les viewers ne publient jamais de média.
  */
 import * as live from "./liveService.js";
-import { findSession, tokenFromCookieHeader } from "../auth/sessions.js";
+import { findSession, isSessionValid, tokenFromCookieHeader } from "../auth/sessions.js";
 import { config } from "../config.js";
 import { clientIpFrom, HttpError } from "../lib/http.js";
 import { finishAllForLive, recordingEvents } from "./recordings.js";
 
 const HEARTS_FLUSH_MS = 250;
+const RETRY_MIN_INTERVAL_MS = 5000; // un viewer ne peut redemander une offre qu'une fois toutes les 5 s
+// Délai laissé à l'onglet qui diffuse pour envoyer ses derniers morceaux
+// avant la finalisation forcée de l'enregistrement (fin du live côté serveur).
+const RECORDING_FINALIZE_DELAY_MS = 8000;
 const HEARTS_BUCKET = { capacity: 30, refillPerSecond: 12 }; // anti-spam par viewer
 
 /* ------------------------------------------------------------------ */
@@ -92,15 +96,20 @@ export function setupSockets(io) {
   pub.on("connection", (socket) => {
     socket.emit("live:status", live.getPublicStatus());
     const bucket = { tokens: HEARTS_BUCKET.capacity, last: Date.now() };
+    let lastRetryAt = 0;
 
     // La page /live rejoint la « salle » des viewers.
     socket.on("viewer:join", (_payload, ack) => {
       const reply = typeof ack === "function" ? ack : () => {};
-      if (!live.canJoin()) return reply({ ok: false, reason: "no_live" });
+      // Déjà dans la salle : on ne redéclenche pas de négociation WebRTC.
+      if (live.isViewer(socket.id)) return reply({ ok: true, iceServers: config.live.iceServers });
+
+      const blocker = live.joinBlocker();
+      if (blocker) return reply({ ok: false, reason: blocker });
 
       const ip = clientIpFrom(socket.handshake.headers, socket.handshake.address);
-      const ok = live.addViewer(socket.id, { ip, userAgent: socket.handshake.headers["user-agent"] });
-      if (!ok) return reply({ ok: false, reason: "full" });
+      const result = live.addViewer(socket.id, { ip, userAgent: socket.handshake.headers["user-agent"] });
+      if (result !== "ok") return reply({ ok: false, reason: result });
 
       socket.join("viewers");
       reply({ ok: true, iceServers: config.live.iceServers });
@@ -112,6 +121,8 @@ export function setupSockets(io) {
 
     // Le viewer redemande une offre (connexion WebRTC échouée).
     socket.on("viewer:retry", () => {
+      if (Date.now() - lastRetryAt < RETRY_MIN_INTERVAL_MS) return;
+      lastRetryAt = Date.now();
       const broadcaster = live.getBroadcasterSocketId();
       if (broadcaster && live.isViewer(socket.id)) {
         cockpit.to(broadcaster).emit("viewer:new", { viewerId: socket.id });
@@ -163,6 +174,15 @@ export function setupSockets(io) {
   });
 
   cockpit.on("connection", (socket) => {
+    // La session est revérifiée à chaque message (expirée, déconnectée,
+    // mot de passe changé…) : le socket est alors coupé.
+    socket.use((_packet, next) => {
+      if (isSessionValid(socket.data.session.tokenHash)) return next();
+      next(new Error("unauthorized"));
+      socket.disconnect(true);
+    });
+    socket.on("error", () => {});
+
     socket.emit("cockpit:state", live.getCockpitState());
 
     // Démarrer / reprendre la diffusion depuis cet onglet.
@@ -170,8 +190,10 @@ export function setupSockets(io) {
       try {
         const result = live.startBroadcast({
           socketId: socket.id,
+          tabId: typeof payload?.tabId === "string" ? payload.tabId.slice(0, 64) : null,
           liveId: Number.isInteger(payload?.liveId) ? payload.liveId : undefined,
           title: payload?.title,
+          resume: payload?.resume === true,
           takeover: payload?.takeover === true,
         });
         ack?.({ ok: true, ...result });
@@ -219,8 +241,11 @@ export function setupSockets(io) {
 
   live.events.on("ended", ({ liveId }) => {
     pub.to("viewers").emit("live:ended", { liveId });
-    // Les enregistrements encore ouverts sont finalisés (ex. fin par délai de grâce).
-    finishAllForLive(liveId).catch((err) => console.error("[rec]", err));
+    // Les enregistrements encore ouverts sont finalisés (fin par délai de grâce, ou
+    // depuis un autre onglet) après un court délai pour recevoir les derniers morceaux.
+    setTimeout(() => {
+      finishAllForLive(liveId).catch((err) => console.error("[rec]", err));
+    }, RECORDING_FINALIZE_DELAY_MS).unref();
   });
 
   live.events.on("revoked", ({ socketId }) => {

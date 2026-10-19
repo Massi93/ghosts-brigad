@@ -81,14 +81,18 @@ export function normalizeIp(ip) {
 
 /**
  * IP du client à partir d'en-têtes bruts + adresse socket.
- * `X-Forwarded-For` n'est lu que si TRUST_PROXY=true (sinon il serait falsifiable).
+ * `X-Forwarded-For` n'est lu que si TRUST_PROXY=true (un seul reverse proxy) :
+ * on prend la DERNIÈRE adresse, celle ajoutée par le proxy, car les précédentes
+ * peuvent être inventées par le client.
  */
 export function clientIpFrom(headers, remoteAddress) {
   if (config.trustProxy) {
     const forwarded = headers["x-forwarded-for"];
-    if (typeof forwarded === "string" && forwarded.trim()) {
-      return normalizeIp(forwarded.split(",")[0].trim());
-    }
+    const last =
+      typeof forwarded === "string"
+        ? forwarded.split(",").map((part) => part.trim()).filter(Boolean).at(-1)
+        : null;
+    if (last) return normalizeIp(last);
   }
   return normalizeIp(remoteAddress);
 }

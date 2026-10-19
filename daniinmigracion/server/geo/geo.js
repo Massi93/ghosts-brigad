@@ -9,6 +9,7 @@ import net from "node:net";
 import { config } from "../config.js";
 
 const CACHE_TTL_MS = 24 * 3600_000;
+const CACHE_MAX = 5000; // au-delà, les plus anciennes entrées sont oubliées
 const cache = new Map(); // ip -> { value, expires }
 const inflight = new Map(); // ip -> Promise
 
@@ -103,6 +104,7 @@ export async function locateIp(ip) {
         ? { ...geo, label: label(geo.city, geo.country) }
         : UNKNOWN;
       cache.set(ip, { value, expires: Date.now() + CACHE_TTL_MS });
+      if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
       return value;
     })
     .catch((err) => {

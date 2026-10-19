@@ -32,8 +32,12 @@ export function useViewerStream(socket, enabled) {
       pendingCandidates.current = [];
     };
 
+    let joined = false;
+
     // Rejoint la salle des viewers (et à chaque reconnexion du socket).
+    // Refus temporaire (salle d'attente pas encore ouverte, live complet) : on réessaie.
     const join = () => {
+      clearTimeout(retryTimer);
       socket.timeout(8000).emit("viewer:join", {}, (err, res) => {
         if (disposed) return;
         if (err || !res) {
@@ -41,9 +45,11 @@ export function useViewerStream(socket, enabled) {
           return;
         }
         if (!res.ok) {
-          setState(res.reason === "full" ? "full" : "idle");
+          setState(res.reason === "full" || res.reason === "ip_limit" ? "full" : "idle");
+          retryTimer = setTimeout(join, res.reason === "too_early" ? 60_000 : 15_000);
           return;
         }
+        joined = true;
         iceServers.current = res.iceServers || [];
         setState((s) => (s === "connected" ? s : "waiting"));
       });
@@ -100,15 +106,26 @@ export function useViewerStream(socket, enabled) {
       }
     };
 
+    // Le live démarre alors qu'on n'est pas encore dans la salle : on entre tout de suite.
+    const onStatus = (payload) => {
+      if (!joined && payload.live?.status === "live") join();
+    };
+    const onConnect = () => {
+      joined = false;
+      join();
+    };
+
     socket.on("rtc:signal", onSignal);
-    socket.on("connect", join);
+    socket.on("live:status", onStatus);
+    socket.on("connect", onConnect);
     if (socket.connected) join();
 
     return () => {
       disposed = true;
       clearTimeout(retryTimer);
       socket.off("rtc:signal", onSignal);
-      socket.off("connect", join);
+      socket.off("live:status", onStatus);
+      socket.off("connect", onConnect);
       socket.emit("viewer:leave");
       closePeer();
       setStream(null);

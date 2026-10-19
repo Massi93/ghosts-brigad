@@ -53,9 +53,19 @@ async function sendReminders(live, kind, registeredBefore) {
       to: registration.email,
       subject: content.subject,
     });
-    if (logId) await deliverLogged(logId, registration.email, content);
+    if (logId) await deliverLogged(logId, registration.email, content, { priority: true });
   }
   return recipients.length;
+}
+
+/**
+ * Un live a été reprogrammé : ses rappels repartent de zéro pour que les
+ * inscrits reçoivent la nouvelle heure.
+ */
+export function resetReminders(liveId) {
+  db.prepare(
+    "DELETE FROM email_logs WHERE live_id = ? AND kind IN ('reminder_3h', 'reminder_5m')"
+  ).run(liveId);
 }
 
 /** Un passage du planificateur (exporté pour les tests). */

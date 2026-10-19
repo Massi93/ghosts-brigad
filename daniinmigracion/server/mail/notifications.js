@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import { EventEmitter } from "node:events";
 import { db, nowIso } from "../db/index.js";
 import { sendMail } from "./mailer.js";
-import { confirmationEmail, manualEmail, testEmail } from "./templates.js";
+import { confirmationEmail, manualEmail, resubscribeEmail, testEmail } from "./templates.js";
 
 /** Progression des envois manuels (relayée au cockpit par Socket.io). */
 export const mailEvents = new EventEmitter();
@@ -26,9 +26,9 @@ export function createLog({ registrationId = null, liveId = null, kind, batchId 
 }
 
 /** Envoie l'email et met à jour son statut. Ne lève pas d'erreur. */
-export async function deliverLogged(logId, to, content) {
+export async function deliverLogged(logId, to, content, { priority = false } = {}) {
   try {
-    await sendMail({ to, ...content });
+    await sendMail({ to, ...content }, { priority });
     db.prepare("UPDATE email_logs SET status = 'sent', sent_at = ?, error = NULL WHERE id = ?").run(nowIso(), logId);
     return { status: "sent" };
   } catch (err) {
@@ -46,6 +46,27 @@ export async function sendConfirmation(registration, live) {
     registrationId: registration.id,
     liveId: live?.id ?? null,
     kind: "confirmation",
+    to: registration.email,
+    subject: content.subject,
+  });
+  return deliverLogged(logId, registration.email, content);
+}
+
+/**
+ * Lien de réinscription pour une adresse désinscrite (au plus un par 24 h,
+ * pour qu'un tiers ne puisse pas s'en servir pour inonder la boîte de quelqu'un).
+ */
+export async function sendResubscribeRequest(registration) {
+  const recent = db
+    .prepare(
+      "SELECT 1 FROM email_logs WHERE registration_id = ? AND kind = 'resubscribe' AND created_at >= ?"
+    )
+    .get(registration.id, new Date(Date.now() - 86400_000).toISOString());
+  if (recent) return { status: "skipped" };
+  const content = resubscribeEmail(registration);
+  const logId = createLog({
+    registrationId: registration.id,
+    kind: "resubscribe",
     to: registration.email,
     subject: content.subject,
   });

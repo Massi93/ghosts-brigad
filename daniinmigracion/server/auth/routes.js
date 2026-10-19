@@ -12,8 +12,11 @@ import {
 import { createRateLimiter } from "../lib/rateLimit.js";
 import { clientIp } from "../lib/http.js";
 
-// 5 échecs max par IP sur 15 minutes (protection contre le brute-force).
+// 5 essais max par IP sur 15 minutes (protection contre le brute-force).
 const loginLimiter = createRateLimiter({ max: 5, windowMs: 15 * 60_000 });
+// bcrypt occupe le processeur : on limite le nombre de vérifications simultanées.
+const MAX_LOGINS_IN_FLIGHT = 4;
+let loginsInFlight = 0;
 
 /**
  * @param {{ onLogout: (tokenHash: string) => void }} hooks
@@ -31,15 +34,27 @@ export function authRouter({ onLogout }) {
       });
     }
 
+    if (loginsInFlight >= MAX_LOGINS_IN_FLIGHT) {
+      return res.status(429).json({ error: "Servidor ocupado, inténtalo de nuevo.", code: "busy" });
+    }
+
     const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
     const password = typeof req.body?.password === "string" ? req.body.password : "";
-    const admin =
-      username && password && password.length <= 200
-        ? await verifyCredentials(username, password)
-        : null;
+
+    // L'essai est compté AVANT la vérification : des requêtes parallèles ne
+    // peuvent pas contourner la limite. Le compteur est remis à zéro si c'est le bon.
+    loginLimiter.hit(ip);
+    loginsInFlight += 1;
+    let admin = null;
+    try {
+      if (username && password && password.length <= 200) {
+        admin = await verifyCredentials(username, password);
+      }
+    } finally {
+      loginsInFlight -= 1;
+    }
 
     if (!admin) {
-      loginLimiter.hit(ip);
       return res
         .status(401)
         .json({ error: "Usuario o contraseña incorrectos", code: "bad_credentials" });

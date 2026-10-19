@@ -54,7 +54,7 @@ function liveUrl() {
   return `${config.publicUrl}/live`;
 }
 
-function unsubscribeUrl(token) {
+export function unsubscribeUrl(token) {
   return `${config.publicUrl}/api/public/unsubscribe?token=${encodeURIComponent(token)}`;
 }
 
@@ -123,7 +123,7 @@ export function confirmationEmail(registration, live) {
       ? `Tu lugar para el live «${live.title}» está reservado: ${when}.\nEnlace: ${liveUrl()}`
       : "Te avisaremos en cuanto Dani programe el próximo live."
   }\n\nTe enviaremos un recordatorio 3 horas y 5 minutos antes.${textFooter(registration.unsubscribe_token)}`;
-  return { subject, html, text };
+  return { subject, html, text, unsubscribeUrl: unsubscribeUrl(registration.unsubscribe_token) };
 }
 
 /** Rappel automatique (3 h ou 5 min avant). */
@@ -146,7 +146,7 @@ export function reminderEmail(registration, live, kind, msBefore) {
   const text = `Hola ${name}:\n\nEl live «${live.title}» empieza en ${remaining} (${formatLiveDate(
     live.scheduled_at
   )}).\nEntra aquí: ${liveUrl()}${textFooter(registration.unsubscribe_token)}`;
-  return { subject, html, text };
+  return { subject, html, text, unsubscribeUrl: unsubscribeUrl(registration.unsubscribe_token) };
 }
 
 /** Email manuel envoyé depuis le cockpit. `message` est du texte brut. */
@@ -164,6 +164,22 @@ export function manualEmail(registration, { subject, message }) {
     unsubscribeToken: registration.unsubscribe_token,
   });
   const text = `${personalized}\n\n${liveUrl()}${textFooter(registration.unsubscribe_token)}`;
+  return { subject, html, text, unsubscribeUrl: unsubscribeUrl(registration.unsubscribe_token) };
+}
+
+/** Lien de réinscription pour une adresse désinscrite (c'est la personne qui confirme). */
+export function resubscribeEmail(registration) {
+  const url = `${config.publicUrl}/api/public/resubscribe?token=${encodeURIComponent(registration.unsubscribe_token)}`;
+  const subject = "Confirma que quieres volver a recibir los avisos de los lives";
+  const html = layout({
+    preheader: subject,
+    bodyHtml: `<h1 style="margin:0 0 12px;font-size:22px;color:#fff">Hola ${escapeHtml(registration.first_name)}:</h1>
+      <p style="margin:0 0 12px">Recibimos una solicitud para volver a inscribir este correo a los lives de Dani Inmigración.</p>
+      <p style="margin:0">Si fuiste tú, confírmalo con el botón. Si no, ignora este mensaje: no recibirás nada más.</p>`,
+    ctaLabel: "Sí, quiero volver a recibir avisos",
+    ctaUrl: url,
+  });
+  const text = `Hola ${registration.first_name}:\n\nPara volver a recibir los avisos de los lives, confirma aquí: ${url}\n\nSi no fuiste tú, ignora este mensaje.`;
   return { subject, html, text };
 }
 

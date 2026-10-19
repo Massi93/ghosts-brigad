@@ -33,6 +33,8 @@ export const events = new EventEmitter();
 const state = {
   liveId: null,
   broadcasterSocketId: null,
+  broadcasterTabId: null, // identifiant de l'onglet du cockpit qui diffuse
+
   interruptedSince: null, // horodatage (ms) de la perte de la caméra
   graceTimer: null,
   hearts: 0,
@@ -130,31 +132,45 @@ function persistStats() {
   if (state.liveId) saveLiveStats(state.liveId, getStats());
 }
 
+const ended = () => new HttpError(409, "Este live ya terminó", "ended");
+
 /**
- * Démarre (ou reprend) la diffusion depuis un onglet du cockpit.
+ * Démarre un live, ou reprend la diffusion d'un live en cours.
  *
  * @param {object} opts
  * @param {string} opts.socketId   socket du cockpit qui diffuse
- * @param {number} [opts.liveId]   live programmé à démarrer
+ * @param {string} [opts.tabId]    identifiant de l'onglet (une reconnexion du même onglet reprend la main)
+ * @param {number} [opts.liveId]   live programmé à démarrer, ou live à reprendre
  * @param {string} [opts.title]    titre d'un live immédiat (non programmé)
- * @param {boolean} [opts.takeover] reprendre la main sur un autre onglet
+ * @param {boolean} [opts.resume]  reprise d'un live existant : ne crée jamais de nouveau live
+ * @param {boolean} [opts.takeover] reprendre la main sur un autre onglet (action explicite de Dani)
  * @returns {{ live: object, viewerIds: string[], resumed: boolean }}
  */
-export function startBroadcast({ socketId, liveId, title, takeover = false }) {
-  // Un live est déjà en cours : on rattache la caméra (reprise après coupure).
+export function startBroadcast({ socketId, tabId = null, liveId, title, resume = false, takeover = false }) {
   if (state.liveId) {
-    if (state.broadcasterSocketId && state.broadcasterSocketId !== socketId) {
-      if (!takeover) {
+    if (!resume) throw new HttpError(409, "Ya hay un live en curso", "live_in_progress");
+    if (liveId && liveId !== state.liveId) throw ended();
+
+    // Rattache la caméra (reprise après coupure). Un autre onglet ne peut prendre
+    // la main que sur demande explicite ; le même onglet reconnecté, toujours.
+    const owner = state.broadcasterSocketId;
+    if (owner && owner !== socketId) {
+      const sameTab = Boolean(tabId) && tabId === state.broadcasterTabId;
+      if (!sameTab && !takeover) {
         throw new HttpError(409, "Ya se está transmitiendo desde otra pestaña", "busy");
       }
-      events.emit("revoked", { socketId: state.broadcasterSocketId });
+      if (!sameTab) events.emit("revoked", { socketId: owner });
     }
     state.broadcasterSocketId = socketId;
+    state.broadcasterTabId = tabId;
     state.interruptedSince = null;
     clearGraceTimer();
     events.emit("status");
     return { live: toAdminLive(currentLiveRow()), viewerIds: viewerIds(), resumed: true };
   }
+
+  // Aucun live en cours : une reprise ne doit jamais en créer un nouveau.
+  if (resume) throw ended();
 
   let row;
   if (liveId) {
@@ -164,12 +180,14 @@ export function startBroadcast({ socketId, liveId, title, takeover = false }) {
     }
     row = markLiveStarted(row.id);
   } else {
-    const cleanTitle = typeof title === "string" && title.trim() ? title.trim().slice(0, 120) : "";
-    row = createLive({ title: cleanTitle || "Live con Dani", status: "live" });
+    const cleanTitle = typeof title === "string" ? title.trim().slice(0, 120) : "";
+    if (!cleanTitle) throw new HttpError(400, "Falta el título del live", "missing_title");
+    row = createLive({ title: cleanTitle, status: "live" });
   }
 
   state.liveId = row.id;
   state.broadcasterSocketId = socketId;
+  state.broadcasterTabId = tabId;
   state.interruptedSince = null;
   state.hearts = 0;
   // Les viewers déjà en salle d'attente comptent dès le démarrage.
@@ -193,6 +211,7 @@ export function endLive(reason = "manual") {
 
   state.liveId = null;
   state.broadcasterSocketId = null;
+  state.broadcasterTabId = null;
   state.interruptedSince = null;
   state.hearts = 0;
   state.peakViewers = 0;
@@ -244,14 +263,34 @@ export function restoreAfterRestart() {
 /* Viewers                                                             */
 /* ------------------------------------------------------------------ */
 
-/** Retourne `true` si un viewer peut rejoindre (live en cours ou programmé). */
-export function canJoin() {
-  return Boolean(state.liveId || getNextScheduled());
+// La salle d'attente ouvre 1 h avant le début (évite d'occuper des places des jours à l'avance).
+const WAITING_ROOM_MS = 3600_000;
+
+/**
+ * Un viewer peut-il rejoindre maintenant ?
+ * @returns {null | "no_live" | "too_early"} `null` si oui, sinon la raison
+ */
+export function joinBlocker() {
+  if (state.liveId) return null;
+  const next = getNextScheduled();
+  if (!next) return "no_live";
+  return Date.parse(next.scheduled_at) - Date.now() > WAITING_ROOM_MS ? "too_early" : null;
 }
 
+const isLoopback = (ip) => ip === "::1" || ip.startsWith("127.");
+
+/**
+ * Ajoute un viewer.
+ * @returns {"ok" | "full" | "ip_limit"}
+ */
 export function addViewer(socketId, { ip, userAgent }) {
-  if (viewers.has(socketId)) return true;
-  if (viewers.size >= config.live.maxViewers) return false;
+  if (viewers.has(socketId)) return "ok";
+  if (viewers.size >= config.live.maxViewers) return "full";
+  if (!isLoopback(ip)) {
+    let sameIp = 0;
+    for (const v of viewers.values()) if (v.ip === ip) sameIp += 1;
+    if (sameIp >= config.live.maxViewersPerIp) return "ip_limit";
+  }
 
   const { device, browser } = describeDevice(userAgent);
   const viewer = {
@@ -286,7 +325,7 @@ export function addViewer(socketId, { ip, userAgent }) {
     });
     events.emit("viewers");
   });
-  return true;
+  return "ok";
 }
 
 export function removeViewer(socketId) {

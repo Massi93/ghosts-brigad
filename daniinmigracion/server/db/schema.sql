@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS email_logs (
   registration_id INTEGER REFERENCES registrations(id) ON DELETE CASCADE,
   live_id         INTEGER REFERENCES lives(id) ON DELETE SET NULL,
   kind            TEXT NOT NULL
-                  CHECK (kind IN ('confirmation', 'reminder_3h', 'reminder_5m', 'manual', 'test')),
+                  CHECK (kind IN ('confirmation', 'resubscribe', 'reminder_3h', 'reminder_5m', 'manual', 'test')),
   batch_id        TEXT,
   to_email        TEXT NOT NULL,
   subject         TEXT NOT NULL,
