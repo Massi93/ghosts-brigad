@@ -3,3 +3,7 @@ dist
 .DS_Store
 *.local
 .vite
+
+# Live : configuration locale et données (base, enregistrements, emails de test)
+.env
+storage/

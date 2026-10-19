@@ -1,0 +1,50 @@
+/**
+ * Petit client HTTP pour l'API du serveur (/api/...).
+ * Les cookies de session sont envoyés automatiquement (même origine).
+ */
+
+export class ApiError extends Error {
+  constructor(status, message, code) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
+let unauthorizedHandler = null;
+
+/** Action à exécuter quand l'API admin répond 401 (session expirée → login). */
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler;
+}
+
+/**
+ * Appelle l'API et retourne le JSON. Lève `ApiError` si le statut n'est pas 2xx.
+ * @param {string} path  chemin après /api (ex. "/admin/lives")
+ * @param {{ method?: string, body?: any, signal?: AbortSignal }} [options]
+ */
+export async function api(path, { method = "GET", body, signal } = {}) {
+  const init = {
+    method,
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+    signal,
+  };
+  if (body instanceof Blob || body instanceof ArrayBuffer) {
+    init.body = body;
+    init.headers["Content-Type"] = "application/octet-stream";
+  } else if (body !== undefined) {
+    init.body = JSON.stringify(body);
+    init.headers["Content-Type"] = "application/json";
+  }
+
+  const response = await fetch(`/api${path}`, init);
+  const isJson = response.headers.get("content-type")?.includes("application/json");
+  const data = isJson ? await response.json().catch(() => ({})) : {};
+
+  if (!response.ok) {
+    if (response.status === 401 && path.startsWith("/admin")) unauthorizedHandler?.();
+    throw new ApiError(response.status, data.error || "Error de conexión", data.code);
+  }
+  return data;
+}

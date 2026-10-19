@@ -8,14 +8,17 @@ import FAQ from "./components/FAQ";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 import MobileBar from "./components/MobileBar";
+import NextLive from "./components/NextLive";
 
 function Site() {
   return (
-    <div className="relative mx-auto min-h-screen w-full max-w-md overflow-hidden bg-ink">
+    // overflow-x-clip (et non overflow-hidden) : garde l'en-tête « sticky », donc le bouton LIVE toujours visible.
+    <div className="relative mx-auto min-h-screen w-full max-w-md overflow-x-clip bg-ink">
       <Nav />
       <main>
         <Hero />
         <Stats />
+        <NextLive />
         <Services />
         <Process />
         <Testimonials />

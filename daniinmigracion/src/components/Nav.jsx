@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Globe2, Phone } from "lucide-react";
 import { WHATSAPP } from "../data";
+import LiveButton from "./LiveButton";
+import { useLiveStatus } from "../lib/liveStatus";
 
 const links = [
+  { label: "Próximo live", href: "#proximo-live" },
   { label: "Servicios", href: "#servicios" },
   { label: "Proceso", href: "#proceso" },
   { label: "Testimonios", href: "#testimonios" },
@@ -13,12 +16,21 @@ const links = [
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { live } = useLiveStatus();
+  const headerRef = useRef(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    // Phase de capture : on suit aussi le défilement du cadre « téléphone » sur
+    // ordinateur (l'en-tête y est sticky), en ignorant les carrousels horizontaux.
+    const onScroll = (e) => {
+      const target = e?.target;
+      if (target && target !== document && !target.contains(headerRef.current)) return;
+      const top = target && target !== document ? target.scrollTop : window.scrollY;
+      setScrolled(top > 12);
+    };
     onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    return () => document.removeEventListener("scroll", onScroll, { capture: true });
   }, []);
 
   useEffect(() => {
@@ -27,13 +39,19 @@ export default function Nav() {
 
   return (
     <header
+      ref={headerRef}
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled ? "glass shadow-soft" : "bg-transparent"
       }`}
     >
       <nav className="container-app flex h-16 items-center justify-between">
-        <a href="#top" className="flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-glow">
+        <a href="#top" className="flex min-w-0 items-center gap-2">
+          {/* Sur petit écran, l'icône laisse la place au bouton LIVE quand un live est programmé. */}
+          <span
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-glow ${
+              live ? "max-[420px]:hidden" : ""
+            }`}
+          >
             <Globe2 className="h-5 w-5 text-white" />
           </span>
           <span className="font-display text-base font-extrabold tracking-tight">
@@ -41,13 +59,16 @@ export default function Nav() {
           </span>
         </a>
 
-        <button
-          aria-label="Abrir menú"
-          onClick={() => setOpen(true)}
-          className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 active:scale-90"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <LiveButton />
+          <button
+            aria-label="Abrir menú"
+            onClick={() => setOpen(true)}
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 active:scale-90"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </nav>
 
       <AnimatePresence>
