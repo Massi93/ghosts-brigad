@@ -34,6 +34,24 @@ function downloadCalendar(live, title) {
   const end = new Date(start.getTime() + 3600_000);
   const url = `${window.location.origin}/live`;
   const escape = (text) => String(text).replace(/[\\;,]/g, (c) => `\\${c}`).replace(/\n/g, "\\n");
+  // RFC 5545 : lignes de 75 octets max, la suite commence par une espace (sans couper un caractère).
+  const fold = (line) => {
+    const out = [];
+    let current = "";
+    let bytes = 0;
+    for (const char of line) {
+      const size = new TextEncoder().encode(char).length;
+      if (bytes + size > (out.length ? 74 : 75)) {
+        out.push(current);
+        current = "";
+        bytes = 0;
+      }
+      current += char;
+      bytes += size;
+    }
+    out.push(current);
+    return out.join("\r\n ");
+  };
   const ics = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -53,7 +71,9 @@ function downloadCalendar(live, title) {
     "END:VALARM",
     "END:VEVENT",
     "END:VCALENDAR",
-  ].join("\r\n");
+  ]
+    .map(fold)
+    .join("\r\n");
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
   link.download = "live-dani-inmigracion.ics";
@@ -222,9 +242,11 @@ export default function Lobby({ live, phase, remaining, mode, T, lang, locale })
 
   let heading;
   let lead = null;
+  // Après la fin d'un live, le suivant (s'il est déjà programmé) s'affiche en dessous.
+  const showNext = mode === "waiting" || mode === "ended";
   if (mode === "ended") {
     heading = T.endedTitle;
-    lead = `${T.endedText} ${T.endedLead}`;
+    lead = scheduled || phase === "ready" ? T.endedText : `${T.endedText} ${T.endedLead}`;
   } else if (mode === "full") {
     heading = T.fullTitle;
     lead = `${T.fullText} ${T.fullLead}`;
@@ -239,7 +261,7 @@ export default function Lobby({ live, phase, remaining, mode, T, lang, locale })
     <div className="site-theme min-h-[100dvh] bg-site-bg text-site-ink">
       <div className="site-stripe" />
       <header className="sticky top-0 z-10 border-b border-site-line bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4">
+        <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))]">
           <a
             href="/"
             aria-label={T.back}
@@ -262,7 +284,7 @@ export default function Lobby({ live, phase, remaining, mode, T, lang, locale })
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-5xl gap-4 px-4 py-6 pb-[max(2rem,env(safe-area-inset-bottom))] lg:grid-cols-2 lg:gap-6 lg:py-10">
+      <main className="mx-auto grid max-w-5xl gap-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] py-6 pb-[max(2rem,env(safe-area-inset-bottom))] lg:grid-cols-2 lg:gap-6 lg:py-10">
         {/* Le live : titre, date, compte à rebours */}
         <section className="relative overflow-hidden rounded-[22px] border border-site-line bg-white p-5 shadow-site-card sm:p-7">
           <div className="site-line-accent absolute left-1/2 top-0 h-[3px] w-3/5 -translate-x-1/2 rounded-b" />
@@ -277,8 +299,9 @@ export default function Lobby({ live, phase, remaining, mode, T, lang, locale })
           <div className="site-line-accent mt-3 h-[3px] w-14 rounded-full" />
           {lead && <p className="mt-4 text-[15px] leading-relaxed text-site-text">{lead}</p>}
 
-          {scheduled && mode === "waiting" && (
+          {scheduled && showNext && (
             <>
+              {mode === "ended" && <p className="mt-6 text-lg font-black leading-snug">{title}</p>}
               <p className="mt-5 text-[11px] font-bold uppercase tracking-wider text-site-gray">{T.dateLabel}</p>
               <p className="mt-1 text-lg font-extrabold leading-snug">{formatLiveDate(live.scheduledAt, locale)}</p>
               <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wider text-site-gray">{T.startsIn}</p>
@@ -294,7 +317,7 @@ export default function Lobby({ live, phase, remaining, mode, T, lang, locale })
             </>
           )}
 
-          {phase === "ready" && mode === "waiting" && (
+          {phase === "ready" && showNext && (
             <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl bg-site-bg px-4 py-6 text-center">
               <Loader2 className="h-7 w-7 animate-spin text-site-red" />
               <p className="font-semibold">{T.daniSoon}</p>

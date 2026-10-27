@@ -63,10 +63,33 @@ const FR = {
   "Este navegador no permite grabar el live": "Ce navigateur ne permet pas d'enregistrer le live",
   "Error de grabación": "Erreur d'enregistrement",
   "No se pudo subir el final de la grabación": "Impossible d'envoyer la fin de l'enregistrement",
+  // Spectateurs (localisation et appareil fournis par le serveur)
+  "Local (este equipo)": "Local (cet appareil)",
+  "Red local": "Réseau local",
+  "Ubicación desconocida": "Lieu inconnu",
+  Ordenador: "Ordinateur",
+  Móvil: "Mobile",
+  Tablet: "Tablette",
+  Navegador: "Navigateur",
+};
+
+// Noms des champs dans les messages de validation du serveur.
+const FIELD_FR = {
+  título: "titre",
+  titulo: "titre",
+  fecha: "date",
+  nombre: "prénom",
+  apellido: "nom",
+  correo: "e-mail",
+  email: "e-mail",
+  mensaje: "message",
+  asunto: "objet",
+  destinatarios: "destinataires",
+  texto: "texte",
 };
 
 const FR_PATTERNS = [
-  [/^Campo inválido: (.+)$/, (m) => `Champ invalide : ${m[1]}`],
+  [/^Campo inválido: (.+)$/, (m) => `Champ invalide : ${FIELD_FR[m[1]] ?? m[1]}`],
   [/^Fecha inválida: (.+)$/, (m) => `Date invalide : ${m[1]}`],
   [/^Fragmento fuera de orden \(esperado (\d+)\)$/, (m) => `Morceau hors séquence (attendu ${m[1]})`],
   [/^No se pudo enviar: (.+)$/, (m) => `Envoi impossible : ${m[1]}`],

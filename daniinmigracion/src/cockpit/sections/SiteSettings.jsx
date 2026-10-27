@@ -53,7 +53,7 @@ export default function SiteSettings() {
     e.preventDefault();
     setTesting(true);
     try {
-      const res = await api("/admin/mail/test", { method: "POST", body: { to: testTo } });
+      const res = await api("/admin/mail/test", { method: "POST", body: { to: testTo, lang: locale } });
       toast(
         res.mode !== "console"
           ? t(`Correo de prueba enviado a ${testTo}`, `E-mail de test envoyé à ${testTo}`)
@@ -80,7 +80,7 @@ export default function SiteSettings() {
         )}
       />
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         <Card>
           {settings && (
             <form onSubmit={save} className="flex flex-col gap-4">
@@ -232,7 +232,7 @@ export default function SiteSettings() {
                 <ul className="flex max-h-72 flex-col divide-y divide-site-line overflow-y-auto">
                   {outbox.map((m) => (
                     <li key={m.id} className="flex items-center justify-between gap-3 py-2">
-                      <span className="min-w-0">
+                      <span className="min-w-0 flex-1">
                         <span className="block truncate font-semibold">{m.subject}</span>
                         <span className="block truncate text-xs text-site-gray">
                           {m.toEmail} · {formatDateTime(m.createdAt, locale)}

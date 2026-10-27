@@ -65,7 +65,7 @@ export default function Recordings() {
           />
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 [&>*]:min-w-0">
           {recordings.map((r) => {
             const status = statusOf(r.status, t);
             const fileUrl = apiFileUrl(`/admin/recordings/${r.id}/file`);
@@ -78,7 +78,7 @@ export default function Recordings() {
                       type="button"
                       onClick={() => setPlaying(null)}
                       aria-label={t("Cerrar", "Fermer")}
-                      className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60"
+                      className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white hover:bg-black/80"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -88,6 +88,7 @@ export default function Recordings() {
                     type="button"
                     disabled={r.status !== "ready"}
                     onClick={() => setPlaying(r.id)}
+                    aria-label={`${t("Ver", "Regarder")} : ${r.liveTitle ?? "Live"}`}
                     className="group grid aspect-video place-items-center rounded-2xl bg-gradient-to-br from-[#1a1b2e] to-site-red-d disabled:cursor-not-allowed"
                   >
                     <PlayCircle className="h-14 w-14 text-white/80 transition group-hover:scale-110 group-hover:text-white" />

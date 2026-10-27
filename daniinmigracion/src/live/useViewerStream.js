@@ -109,6 +109,8 @@ export function useViewerStream(socket, enabled) {
     // Le live démarre alors qu'on n'est pas encore dans la salle : on entre tout de suite.
     const onStatus = (payload) => {
       if (!joined && payload.live?.status === "live") join();
+      // Plus de live : le message « live complet » n'a plus lieu d'être.
+      else if (!joined) setState((s) => (s === "full" ? "idle" : s));
     };
     const onConnect = () => {
       joined = false;

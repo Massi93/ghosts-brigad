@@ -57,7 +57,7 @@ function useWakeLock(active) {
  */
 export default function LivePage() {
   const socket = getPublicSocket();
-  const { live, offset, loaded } = useLiveStatus();
+  const { live, offset, loaded, connected } = useLiveStatus();
   const now = useNow(1000, { offset });
   const { phase, remaining } = livePhase(live, now);
 
@@ -101,12 +101,16 @@ export default function LivePage() {
 
   // Statistiques, cœurs des autres viewers et fin du live.
   useEffect(() => {
-    const onStats = (s) => setStats((prev) => ({ ...prev, viewers: s.viewers, hearts: s.hearts }));
+    // Le total du serveur peut être en retard sur les cœurs que l'on vient d'envoyer : il ne fait que monter.
+    const onStats = (s) => setStats((prev) => ({ ...prev, viewers: s.viewers, hearts: Math.max(prev.hearts, s.hearts) }));
     const onHearts = ({ n, total }) => {
       if (n > 0) heartsRef.current?.burst(n);
       setStats((prev) => ({ ...prev, hearts: Math.max(prev.hearts, total) }));
     };
-    const onEnded = () => setEnded(true);
+    const onEnded = (data) => {
+      endedId.current = data?.liveId ?? prevLive.current?.id ?? null;
+      setEnded(true);
+    };
     socket.on("live:stats", onStats);
     socket.on("hearts", onHearts);
     socket.on("live:ended", onEnded);
@@ -117,14 +121,27 @@ export default function LivePage() {
     };
   }, [socket]);
 
-  // Valeurs initiales fournies par l'état public.
+  // Valeurs initiales fournies par l'état public, et fin du live vue par l'état public
+  // (si le téléphone a perdu la connexion au moment où « live:ended » a été envoyé).
+  const prevLive = useRef(null);
+  const endedId = useRef(null);
+  const statsLiveId = useRef(null);
   useEffect(() => {
+    const prev = prevLive.current;
+    prevLive.current = live;
     if (live?.status === "live") {
       setEnded(false);
-      setStats((prev) => ({
-        viewers: live.viewers ?? prev.viewers,
-        hearts: Math.max(prev.hearts, live.hearts ?? 0),
+      const fresh = statsLiveId.current !== live.id; // nouveau live : compteurs remis à zéro
+      statsLiveId.current = live.id;
+      setStats((p) => ({
+        viewers: live.viewers ?? p.viewers,
+        hearts: Math.max(fresh ? 0 : p.hearts, live.hearts ?? 0),
       }));
+      return;
+    }
+    if (prev?.status === "live" && live?.id !== prev.id) {
+      endedId.current = prev.id;
+      setEnded(true);
     }
   }, [live]);
 
@@ -257,7 +274,7 @@ export default function LivePage() {
       )}
 
       {/* Barre du haut */}
-      <header className="absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
+      <header className="absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="flex min-w-0 items-center gap-3">
           <a
             href="/"
@@ -312,13 +329,18 @@ export default function LivePage() {
       </header>
 
       {/* Reconnexion / son */}
-      {live?.interrupted && stream && <Notice icon={WifiOff} text={T.reconnecting} />}
+      {!connected && stream && <Notice icon={WifiOff} text={T.offline} />}
+      {connected && live?.interrupted && stream && <Notice icon={WifiOff} text={T.reconnecting} />}
       {!live?.interrupted && stream && needsSound && (
         <button
           type="button"
-          onPointerUp={stop}
+          // Activé dès le relâchement du doigt (un « click » pourrait tomber à côté du bouton).
+          onPointerUp={(e) => {
+            stop(e);
+            enableSound();
+          }}
           onClick={enableSound}
-          className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-white px-5 py-3 text-sm font-bold text-[#0f1020] shadow-lg active:scale-95"
+          className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-white px-5 py-3 text-sm font-bold text-[#0f1020] shadow-lg"
         >
           <VolumeX className="h-5 w-5 text-[#c60b1e]" /> {T.tapSound}
         </button>
@@ -327,7 +349,7 @@ export default function LivePage() {
       <HeartsLayer ref={heartsRef} />
 
       {/* Bouton « me gusta » */}
-      <div className="absolute bottom-0 right-0 z-30 flex flex-col items-center gap-1 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <div className="absolute bottom-0 right-0 z-30 flex flex-col items-center gap-1 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pr-[max(1rem,env(safe-area-inset-right))]">
         <button
           type="button"
           onPointerUp={stop}
@@ -341,7 +363,7 @@ export default function LivePage() {
       </div>
 
       {stream && !needsSound && (
-        <p className="pointer-events-none absolute bottom-0 left-0 z-30 max-w-[60%] p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-xs text-white/70">
+        <p className="pointer-events-none absolute bottom-0 left-0 z-30 max-w-[60%] p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] text-xs text-white/70">
           {T.doubleTap}
         </p>
       )}

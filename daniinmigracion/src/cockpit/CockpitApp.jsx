@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarClock,
   ExternalLink,
@@ -99,8 +99,17 @@ function Dashboard({ admin }) {
     navigate("/cockpit/login", { replace: true });
   };
 
+  const tabsRef = useRef(null);
   useEffect(() => {
     window.scrollTo({ top: 0 });
+    // Mobile : l'onglet actif reste visible dans la barre d'onglets défilante.
+    const tab = tabsRef.current?.querySelector('[aria-current="page"]');
+    if (tab) {
+      const nav = tabsRef.current;
+      const a = tab.getBoundingClientRect();
+      const b = nav.getBoundingClientRect();
+      nav.scrollLeft += a.left - b.left - (b.width - a.width) / 2;
+    }
   }, [section]);
 
   return (
@@ -156,13 +165,14 @@ function Dashboard({ admin }) {
             </div>
           </div>
           {/* Onglets (mobile / tablette) */}
-          <nav className="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-2 lg:hidden">
+          <nav ref={tabsRef} className="no-scrollbar flex gap-1 overflow-x-auto px-3 pb-2 lg:hidden">
             {SECTIONS.map((s) => {
               const Icon = s.icon;
               return (
                 <a
                   key={s.id}
                   href={`#${s.id}`}
+                  aria-current={s.id === section ? "page" : undefined}
                   className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold transition ${
                     s.id === section
                       ? "bg-site-red text-white shadow-site-red"

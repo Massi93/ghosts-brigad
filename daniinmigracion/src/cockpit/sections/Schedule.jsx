@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CalendarClock, CalendarPlus, Heart, History, Pencil, Play, Trash2, TrendingUp, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDateTime, formatDuration, formatLiveDate, splitDuration, useNow } from "../../lib/time";
@@ -59,6 +59,7 @@ export default function Schedule() {
   const [lists, setLists] = useState({ upcoming: [], past: [] });
   const [form, setForm] = useState({ title: "", description: "", ...defaultDateTime() });
   const [editingId, setEditingId] = useState(null);
+  const editingFrom = useRef(null); // date d'origine du live en cours de modification
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(() => {
@@ -70,6 +71,7 @@ export default function Schedule() {
 
   const resetForm = () => {
     setEditingId(null);
+    editingFrom.current = null;
     setForm({ title: "", description: "", ...defaultDateTime() });
   };
 
@@ -80,6 +82,9 @@ export default function Schedule() {
     setSaving(true);
     try {
       const body = { title: form.title, description: form.description, scheduledAt };
+      // Date inchangée : on ne la renvoie pas (un live un peu en retard reste modifiable).
+      const sameMinute = (a, b) => Math.floor(Date.parse(a) / 60000) === Math.floor(Date.parse(b) / 60000);
+      if (editingId && editingFrom.current && sameMinute(scheduledAt, editingFrom.current)) delete body.scheduledAt;
       if (editingId) {
         await api(`/admin/lives/${editingId}`, { method: "PATCH", body });
         toast(t("Live actualizado", "Live mis à jour"));
@@ -98,6 +103,7 @@ export default function Schedule() {
 
   const edit = (l) => {
     setEditingId(l.id);
+    editingFrom.current = l.scheduledAt;
     setForm({ title: l.title, description: l.description ?? "", ...toLocalFields(l.scheduledAt) });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -124,7 +130,7 @@ export default function Schedule() {
         )}
       />
 
-      <div className="grid gap-5 lg:grid-cols-5">
+      <div className="grid gap-5 lg:grid-cols-5 [&>*]:min-w-0">
         {/* Formulaire */}
         <Card className="lg:col-span-2">
           <form onSubmit={submit} className="flex flex-col gap-4">

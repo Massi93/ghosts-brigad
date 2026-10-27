@@ -9,7 +9,10 @@ import logoUrl from "../assets/logo-dani.jpg";
 /** Destination après connexion (uniquement une page du cockpit : pas de redirection ouverte). */
 function nextUrl() {
   const next = new URLSearchParams(currentSearch()).get("next");
-  return next && /^\/cockpit(\/|$|\?|#)/.test(next) && !next.startsWith("/cockpit/login") ? next : "/cockpit";
+  const target = next && /^\/cockpit(\/|$|\?|#)/.test(next) && !next.startsWith("/cockpit/login") ? next : "/cockpit";
+  // La section demandée (#inscritos…) n'arrive pas au serveur : elle est restée dans l'adresse de cette page.
+  const hash = window.location.hash;
+  return !target.includes("#") && /^#[\w-]+$/.test(hash) ? target + hash : target;
 }
 
 export default function LoginPage() {

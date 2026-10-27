@@ -20,6 +20,19 @@ import { formatBytes, formatDuration, formatLiveDate, useNow } from "../../lib/t
 import { useCockpit } from "../CockpitContext";
 import { Badge, Button, Card, EmptyState, Field, SectionTitle, Stat, flag, inputClass, useToast } from "../ui";
 import { useLang } from "../i18n";
+import { translateServerMessage } from "../../lib/serverMessages";
+
+/** « Ville, Pays » dans la langue du cockpit (le serveur l'envoie en espagnol). */
+function viewerLocation(v, locale) {
+  if (!v.countryCode) return translateServerMessage(v.location);
+  let country = v.countryCode;
+  try {
+    country = new Intl.DisplayNames([locale], { type: "region" }).of(v.countryCode) ?? v.countryCode;
+  } catch {
+    // code pays inconnu du navigateur
+  }
+  return [v.city, country].filter(Boolean).join(", ");
+}
 
 /** Live pré-sélectionné via l'URL (#directo?live=12, depuis « Programación »). */
 function preselectedLiveId() {
@@ -157,7 +170,7 @@ export default function LiveStudio() {
         )}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3 [&>*]:min-w-0">
         {/* Vidéo */}
         <div className="lg:col-span-2">
           <div className="relative aspect-video overflow-hidden rounded-3xl border border-site-line bg-black">
@@ -218,7 +231,7 @@ export default function LiveStudio() {
               {b.camOn ? t("Cámara activa", "Caméra active") : t("Cámara pausada", "Caméra en pause")}
             </Button>
             <select
-              className={`${inputClass} w-auto max-w-[14rem] py-2`}
+              className={`${inputClass} w-full py-2 sm:w-auto sm:max-w-[16rem]`}
               value={b.selected.cameraId}
               onChange={(e) => b.selectDevice({ cameraId: e.target.value })}
               disabled={localLive || !b.devices.cameras.length}
@@ -232,7 +245,7 @@ export default function LiveStudio() {
               ))}
             </select>
             <select
-              className={`${inputClass} w-auto max-w-[14rem] py-2`}
+              className={`${inputClass} w-full py-2 sm:w-auto sm:max-w-[16rem]`}
               value={b.selected.micId}
               onChange={(e) => b.selectDevice({ micId: e.target.value })}
               disabled={localLive || !b.devices.mics.length}
@@ -329,7 +342,7 @@ export default function LiveStudio() {
       </div>
 
       {/* Statistiques en temps réel */}
-      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5 [&>*]:min-w-0">
         <Stat icon={Eye} label={t("Espectadores", "Spectateurs")} value={stats.viewers} tone="text-emerald-600" />
         <Stat icon={TrendingUp} label={t("Pico", "Pic")} value={stats.peakViewers} />
         <Stat icon={Heart} label={t("Me gusta", "J'aime")} value={stats.hearts} tone="text-pink-400" />
@@ -368,9 +381,9 @@ export default function LiveStudio() {
                     {flag(v.countryCode)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{v.location}</p>
+                    <p className="truncate font-semibold">{viewerLocation(v, locale)}</p>
                     <p className="text-xs text-site-gray">
-                      {v.device} · {v.browser} · IP {v.maskedIp}
+                      {translateServerMessage(v.device)} · {translateServerMessage(v.browser)} · IP {v.maskedIp}
                     </p>
                   </div>
                   <span className="font-mono text-xs tabular-nums text-site-gray">

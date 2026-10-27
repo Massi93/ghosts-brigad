@@ -62,6 +62,16 @@ export class LiveSocket extends Emitter {
     this.buffer = [];
     // Équivalent du « Manager » de Socket.io (événement « reconnect »).
     this.io = new Emitter();
+    // Téléphone : retour du réseau ou de l'application au premier plan → reconnexion immédiate.
+    const retryNow = () => {
+      if (this.wanted && !this.ws && !document.hidden) {
+        this.attempts = 0;
+        clearTimeout(this.reconnectTimer);
+        this.connect();
+      }
+    };
+    window.addEventListener("online", retryNow);
+    document.addEventListener("visibilitychange", retryNow);
     if (autoConnect) this.connect();
   }
 

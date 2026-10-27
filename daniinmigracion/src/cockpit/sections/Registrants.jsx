@@ -27,6 +27,15 @@ function defaultMessage(next, lang, locale) {
 }
 
 /** Statut d'envoi affiché pour un inscrit. */
+/** Langue de l'inscrit (celle de ses emails). */
+function LangBadge({ lang }) {
+  return (
+    <span className="inline-block rounded-md bg-site-bg px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-site-gray">
+      {lang || "es"}
+    </span>
+  );
+}
+
 function EmailStatus({ status, kind, error }) {
   const { t } = useLang();
   if (!status) return <span className="text-xs text-site-gray/70">—</span>;
@@ -87,9 +96,11 @@ export default function Registrants() {
         ? `Rappel : ${target?.title ?? "notre prochain live"}`
         : `Recordatorio: ${target?.title ?? "nuestro próximo live"}`;
     const messageText = defaultMessage(target, lang, locale);
-    setSubject((s) => (!s || s === prefill.current.subject ? subjectText : s));
-    setMessage((m) => (!m || m === prefill.current.message ? messageText : m));
+    // Les fonctions passées à setState s'exécutent plus tard : on garde l'ancien texte ici.
+    const previous = prefill.current;
     prefill.current = { subject: subjectText, message: messageText };
+    setSubject((s) => (!s || s === previous.subject ? subjectText : s));
+    setMessage((m) => (!m || m === previous.message ? messageText : m));
   }, [target, lang, locale]);
 
   const eventsFor = (batchId) => {
@@ -224,7 +235,7 @@ export default function Registrants() {
         subtitle={t(`${activeCount} activos · ${rows.length} en total`, `${activeCount} actifs · ${rows.length} au total`)}
         actions={
           <a
-            href={apiFileUrl("/admin/registrations.csv")}
+            href={apiFileUrl(`/admin/registrations.csv?lang=${lang}`)}
             className="inline-flex items-center gap-2 rounded-full border border-site-line bg-white px-5 py-2.5 text-sm font-bold text-site-ink transition hover:border-site-teal hover:text-site-teal-d"
           >
             <Download className="h-4 w-4" /> {t("Exportar CSV", "Exporter en CSV")}
@@ -232,9 +243,9 @@ export default function Registrants() {
         }
       />
 
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid gap-5 xl:grid-cols-3 [&>*]:min-w-0">
         {/* Liste */}
-        <Card className="p-0 xl:col-span-2">
+        <Card className="min-w-0 p-0 xl:col-span-2">
           <div className="flex flex-wrap items-center gap-3 border-b border-site-line px-5 py-4">
             <label className="flex items-center gap-2 text-sm font-medium">
               <input
@@ -246,7 +257,12 @@ export default function Registrants() {
               />
               {t("Seleccionar todo", "Tout sélectionner")}
             </label>
-            <Badge tone="info">{t(`${selected.size} seleccionados`, `${selected.size} sélectionné(s)`)}</Badge>
+            <Badge tone="info">
+              {t(
+                `${selected.size} seleccionado${selected.size === 1 ? "" : "s"}`,
+                `${selected.size} sélectionné${selected.size > 1 ? "s" : ""}`
+              )}
+            </Badge>
             <div className="relative ml-auto w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-site-gray/70" />
               <input
@@ -279,9 +295,9 @@ export default function Registrants() {
                   <thead className="text-xs uppercase tracking-wider text-site-gray">
                     <tr>
                       <th className="w-10 px-5 py-3" />
-                      <th className="px-3 py-3 font-medium">{t("Nombre", "Prénom")}</th>
-                      <th className="px-3 py-3 font-medium">{t("Apellido", "Nom")}</th>
+                      <th className="px-3 py-3 font-medium">{t("Nombre", "Nom")}</th>
                       <th className="px-3 py-3 font-medium">Email</th>
+                      <th className="px-3 py-3 font-medium">{t("Idioma", "Langue")}</th>
                       <th className="px-3 py-3 font-medium">{t("Inscripción", "Inscription")}</th>
                       <th className="px-3 py-3 font-medium">{t("Último envío", "Dernier envoi")}</th>
                       <th className="w-10 px-3 py-3" />
@@ -300,11 +316,19 @@ export default function Registrants() {
                             className="h-4 w-4 accent-site-red"
                           />
                         </td>
-                        <td className="px-3 py-3 font-medium">{r.firstName}</td>
-                        <td className="px-3 py-3">{r.lastName}</td>
+                        <td className="px-3 py-3">
+                          <span className="block max-w-[11rem] truncate font-medium" title={`${r.firstName} ${r.lastName}`}>
+                            {r.firstName} {r.lastName}
+                          </span>
+                        </td>
                         <td className="px-3 py-3 text-site-text">
-                          {r.email}
-                          {r.unsubscribedAt && <Badge className="ml-2">{t("Baja", "Désinscrit")}</Badge>}
+                          <span className="block max-w-[14rem] truncate" title={r.email}>
+                            {r.email}
+                          </span>
+                          {r.unsubscribedAt && <Badge className="mt-1">{t("Baja", "Désinscrit")}</Badge>}
+                        </td>
+                        <td className="px-3 py-3">
+                          <LangBadge lang={r.lang} />
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-site-gray">{formatDateTime(r.createdAt, locale)}</td>
                         <td className="px-3 py-3">
@@ -345,6 +369,7 @@ export default function Registrants() {
                       <p className="truncate text-sm text-site-text">{r.email}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-site-gray">
                         {formatDateTime(r.createdAt, locale)}
+                        <LangBadge lang={r.lang} />
                         <EmailStatus {...(r.lastEmail ?? {})} />
                         {r.unsubscribedAt && <Badge>{t("Baja", "Désinscrit")}</Badge>}
                       </div>
@@ -365,7 +390,7 @@ export default function Registrants() {
         </Card>
 
         {/* Envoi manuel */}
-        <Card className="flex h-fit flex-col gap-4">
+        <Card className="flex h-fit min-w-0 flex-col gap-4">
           <p className="flex items-center gap-2 font-display text-lg font-bold">
             <Mail className="h-5 w-5 text-site-red" /> {t("Notificar por email", "Prévenir par e-mail")}
           </p>

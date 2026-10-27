@@ -98,7 +98,7 @@ export default function Overview() {
       </Card>
 
       {/* Chiffres clés */}
-      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4 [&>*]:min-w-0">
         <Stat
           icon={Users}
           label={t("Inscritos activos", "Inscrits actifs")}
@@ -126,7 +126,7 @@ export default function Overview() {
         />
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      <div className="mt-5 grid gap-5 lg:grid-cols-2 [&>*]:min-w-0">
         {/* Accès rapides */}
         <Card>
           <p className="font-display font-bold">{t("Accesos rápidos", "Accès rapides")}</p>
