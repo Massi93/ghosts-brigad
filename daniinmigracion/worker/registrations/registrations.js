@@ -113,7 +113,7 @@ export function registrationsSummary() {
     .prepare(
       `SELECT COUNT(*) AS total,
               COALESCE(SUM(unsubscribed_at IS NULL), 0) AS active,
-              COALESCE(SUM(created_at >= ?), 0) AS last7Days
+              COALESCE(SUM(created_at >= ? AND unsubscribed_at IS NULL), 0) AS last7Days
          FROM registrations`
     )
     .get(new Date(Date.now() - 7 * 86400_000).toISOString());
@@ -141,8 +141,12 @@ function csvDate(iso) {
 }
 
 /** CSV (séparateur `;` + BOM UTF-8 : s'ouvre directement dans Excel FR/ES). */
-export function registrationsCsv() {
-  const header = ["Nombre", "Apellido", "Email", `Fecha de inscripción (${config.timezone})`, "Idioma", "Estado", "Live"];
+/** Export CSV, en-têtes et valeurs dans la langue du cockpit (es ou fr). */
+export function registrationsCsv(lang = "es") {
+  const fr = lang === "fr";
+  const header = fr
+    ? ["Prénom", "Nom", "Email", `Date d'inscription (${config.timezone})`, "Langue", "Statut", "Live"]
+    : ["Nombre", "Apellido", "Email", `Fecha de inscripción (${config.timezone})`, "Idioma", "Estado", "Live"];
   const lines = listRegistrations().map((r) =>
     [
       r.firstName,
@@ -150,7 +154,7 @@ export function registrationsCsv() {
       r.email,
       csvDate(r.createdAt),
       r.lang,
-      r.unsubscribedAt ? "Baja" : "Activo",
+      r.unsubscribedAt ? (fr ? "Désinscrit" : "Baja") : fr ? "Actif" : "Activo",
       r.liveTitle ?? "",
     ]
       .map(csvCell)

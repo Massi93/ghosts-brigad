@@ -38,6 +38,12 @@ export const T = {
     reminderText: (name, title, remaining, when, url) =>
       `Hola ${name}:\n\nEl live «${title}» empieza en ${remaining} (${when}).\nEntra aquí: ${url}`,
     enterLive: "Entrar al live",
+    // Live lancé avant l'heure prévue (remplace le rappel « 5 min »).
+    liveNowSubject: "🔴 ¡Dani ya está en directo!",
+    liveNowPreheader: "El live ya ha empezado",
+    liveNowHeading: (name) => `¡Estamos en directo, ${name}!`,
+    liveNowBody: (title) => `<strong>«${title}»</strong> ya ha empezado. ¡Entra ahora!`,
+    liveNowText: (name, title, url) => `Hola ${name}:\n\nEl live «${title}» ya ha empezado.\nEntra aquí: ${url}`,
     openLivePage: "Abrir la página del live",
     goLivePage: "Ir a la página del live",
     resubscribeSubject: "Confirma que quieres volver a recibir los avisos de los lives",
@@ -85,6 +91,11 @@ export const T = {
     reminderText: (name, title, remaining, when, url) =>
       `Bonjour ${name},\n\nLe live « ${title} » commence dans ${remaining} (${when}).\nRejoignez-le ici : ${url}`,
     enterLive: "Rejoindre le live",
+    liveNowSubject: "🔴 Dani est en direct !",
+    liveNowPreheader: "Le live a commencé",
+    liveNowHeading: (name) => `Nous sommes en direct, ${name} !`,
+    liveNowBody: (title) => `<strong>« ${title} »</strong> a déjà commencé. Rejoignez-nous !`,
+    liveNowText: (name, title, url) => `Bonjour ${name},\n\nLe live « ${title} » a déjà commencé.\nRejoignez-le ici : ${url}`,
     openLivePage: "Ouvrir la page du live",
     goLivePage: "Aller à la page du live",
     resubscribeSubject: "Confirmez que vous souhaitez de nouveau recevoir les alertes des lives",
@@ -131,6 +142,11 @@ export const T = {
     reminderText: (name, title, remaining, when, url) =>
       `مرحباً ${name}،\n\nالبث المباشر «${title}» يبدأ بعد ${remaining} (${when}).\nادخل من هنا: ${url}`,
     enterLive: "الدخول إلى البث المباشر",
+    liveNowSubject: "🔴 داني في بث مباشر الآن!",
+    liveNowPreheader: "بدأ البث المباشر",
+    liveNowHeading: (name) => `نحن على الهواء يا ${name}!`,
+    liveNowBody: (title) => `<strong>«${title}»</strong> بدأ الآن. ادخل الآن!`,
+    liveNowText: (name, title, url) => `مرحباً ${name}،\n\nبدأ البث المباشر «${title}».\nادخل من هنا: ${url}`,
     openLivePage: "فتح صفحة البث المباشر",
     goLivePage: "الذهاب إلى صفحة البث المباشر",
     resubscribeSubject: "أكّد رغبتك في تلقي تنبيهات البث المباشر من جديد",
@@ -163,8 +179,10 @@ export function formatRemaining(ms, lang) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (lang === "ar") {
-    const hh = h ? `${h} ${h === 1 ? "ساعة" : h === 2 ? "ساعتين" : "ساعات"}` : "";
-    const mm = m ? `${m} دقيقة` : "";
+    // 1 : singulier, 2 : duel (sans chiffre), 3 à 10 : pluriel, 11 et plus : singulier.
+    const count = (n, one, two, few) => (n === 1 ? one : n === 2 ? two : n <= 10 ? `${n} ${few}` : `${n} ${one}`);
+    const hh = h ? count(h, "ساعة", "ساعتين", "ساعات") : "";
+    const mm = m ? count(m, "دقيقة", "دقيقتين", "دقائق") : "";
     return [hh, mm].filter(Boolean).join(" و") || "دقيقة";
   }
   if (!h) return `${m} min`;

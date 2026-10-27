@@ -105,7 +105,9 @@ function getActive(id) {
 
 /** Ouvre un nouvel enregistrement pour un live. */
 export function startRecording({ liveId, mimeType }) {
-  const type = ALLOWED_TYPES.find((t) => typeof mimeType === "string" && mimeType.startsWith(t.prefix));
+  // Type exact (« video/webm;codecs=vp8,opus ») : il est renvoyé tel quel en Content-Type.
+  const valid = typeof mimeType === "string" && /^video\/(webm|mp4)(; *codecs="?[\w., -]+"?)?$/i.test(mimeType);
+  const type = valid ? ALLOWED_TYPES.find((t) => mimeType.toLowerCase().startsWith(t.prefix)) : null;
   if (!type) throw new HttpError(400, "Formato de grabación no soportado");
   const live = db.prepare("SELECT id, status FROM lives WHERE id = ?").get(liveId);
   if (!live || live.status !== "live") throw new HttpError(400, "No hay un live en curso");
@@ -356,7 +358,8 @@ export function recordingResponse(row, request, download) {
       }
       await writable.close();
     } catch (err) {
-      console.error(`[rec] Lecture interrompue (#${row.id}) :`, err?.message || err);
+      // Normal quand le lecteur vidéo change de position ou se ferme : simple information.
+      console.log(`[rec] Lecture interrompue (#${row.id}) : ${err?.message || err}`);
       await writable.abort(err).catch(() => {});
     }
   })();

@@ -13,7 +13,7 @@
 import { config } from "../config.js";
 import { Emitter } from "../lib/events.js";
 import { getSettings } from "../lib/settings.js";
-import { HttpError } from "../lib/http.js";
+import { HttpError, ipKey } from "../lib/http.js";
 import { nowIso } from "../db.js";
 import { describeDevice, maskIp } from "./geo.js";
 import { getIceServers } from "./iceServers.js";
@@ -342,8 +342,10 @@ export function addViewer(socketId, { ip, userAgent, geo }) {
   if (viewers.has(socketId)) return "ok";
   if (viewers.size >= config.live.maxViewers) return "full";
   if (!isLoopback(ip)) {
+    // Même IPv4, ou même réseau /64 en IPv6.
+    const key = ipKey(ip);
     let sameIp = 0;
-    for (const v of viewers.values()) if (v.ip === ip) sameIp += 1;
+    for (const v of viewers.values()) if (ipKey(v.ip) === key) sameIp += 1;
     if (sameIp >= config.live.maxViewersPerIp) return "ip_limit";
   }
 

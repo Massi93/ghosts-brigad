@@ -48,12 +48,47 @@ export function errorResponse(err) {
   return json({ error: "Error interno del servidor" }, 500);
 }
 
+/**
+ * Lit le corps d'une requête morceau par morceau et s'arrête dès que la limite est
+ * dépassée : un envoi énorme (sans Content-Length) ne remplit jamais la mémoire.
+ */
+async function readLimited(request, limit) {
+  const declared = Number(request.headers.get("content-length") || 0);
+  if (declared > limit) {
+    discardBody(request);
+    throw new HttpError(413, "Contenido demasiado grande");
+  }
+  if (!request.body) return new Uint8Array(0);
+  const reader = request.body.getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      reader.cancel().catch(() => {});
+      throw new HttpError(413, "Contenido demasiado grande");
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return out;
+}
+
+/** Abandonne le corps d'une requête refusée avant sa lecture. */
+export function discardBody(request) {
+  if (request.body && !request.bodyUsed) request.body.cancel().catch(() => {});
+}
+
 /** Lit le corps JSON d'une requête (100 Ko max). */
 export async function readJson(request, limit = 100 * 1024) {
-  const declared = Number(request.headers.get("content-length") || 0);
-  if (declared > limit) throw new HttpError(413, "Contenido demasiado grande");
-  const text = await request.text();
-  if (text.length > limit) throw new HttpError(413, "Contenido demasiado grande");
+  const text = new TextDecoder().decode(await readLimited(request, limit));
   if (!text) return {};
   try {
     return JSON.parse(text);
@@ -64,18 +99,18 @@ export async function readJson(request, limit = 100 * 1024) {
 
 /** Lit un corps binaire (morceau de vidéo) avec une taille max. */
 export async function readBinary(request, limit) {
-  const declared = Number(request.headers.get("content-length") || 0);
-  if (declared > limit) throw new HttpError(413, "Contenido demasiado grande");
-  const buffer = await request.arrayBuffer();
-  if (buffer.byteLength > limit) throw new HttpError(413, "Contenido demasiado grande");
-  return buffer;
+  return (await readLimited(request, limit)).buffer;
 }
 
 /* ------------------------------ Validation ------------------------------ */
 
+// eslint-disable-next-line no-control-regex
+const INVISIBLE_RE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g;
+
 /** Chaîne nettoyée et bornée, ou `HttpError 400` si absente/invalide. */
 export function requireString(value, field, { min = 1, max = 200 } = {}) {
-  const str = typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+  // Caractères de contrôle et d'inversion de sens (RTL override) retirés.
+  const str = typeof value === "string" ? value.replace(INVISIBLE_RE, "").trim().replace(/\s+/g, " ") : "";
   if (str.length < min || str.length > max) {
     throw new HttpError(400, `Campo inválido: ${field}`, `invalid_${field}`);
   }
@@ -91,7 +126,8 @@ export function optionalText(value, max = 5000) {
   return str || null;
 }
 
-const EMAIL_RE = /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[^\s@<>"',;]{2,}$/;
+// Partie locale simple, puis un nom de domaine classique (pas d'IP, pas de « .. » ni de « - » en bord).
+const EMAIL_RE = /^[^\s@<>"',;()[\]\\]+@(?:[a-z0-9\u00a1-\uffff](?:[a-z0-9\u00a1-\uffff-]*[a-z0-9\u00a1-\uffff])?\.)+(?:[a-z\u00a1-\uffff]{2,}|xn--[a-z0-9-]+)$/;
 
 /** Email normalisé (minuscules) ou `HttpError 400`. */
 export function requireEmail(value) {
@@ -197,6 +233,22 @@ export function serializeCookie(name, value, { maxAge, secure, httpOnly = true, 
  */
 export function clientIp(request) {
   return (request.headers.get("cf-connecting-ip") || "").trim() || "127.0.0.1";
+}
+
+/**
+ * Clé pour les limites par visiteur : l'adresse IPv4, ou le réseau /64 en IPv6
+ * (chaque abonné IPv6 dispose de milliards d'adresses dans son /64).
+ */
+export function ipKey(ip) {
+  if (!ip.includes(":")) return ip;
+  let parts = ip.toLowerCase().split("%")[0].split(":");
+  const gap = parts.indexOf("");
+  if (gap !== -1) {
+    const head = parts.slice(0, gap).filter(Boolean);
+    const tail = parts.slice(gap + 1).filter(Boolean);
+    parts = [...head, ...Array(Math.max(0, 8 - head.length - tail.length)).fill("0"), ...tail];
+  }
+  return `${parts.slice(0, 4).map((p) => p.replace(/^0+(?=.)/, "")).join(":")}::/64`;
 }
 
 /** L'origine (en-tête Origin) est-elle ce site lui-même ? */

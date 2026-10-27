@@ -243,9 +243,9 @@ export default function Registrants() {
         }
       />
 
-      <div className="grid gap-5 xl:grid-cols-3 [&>*]:min-w-0">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_18rem] 2xl:grid-cols-[minmax(0,1fr)_22rem] [&>*]:min-w-0">
         {/* Liste */}
-        <Card className="min-w-0 p-0 xl:col-span-2">
+        <Card className="min-w-0 p-0">
           <div className="flex flex-wrap items-center gap-3 border-b border-site-line px-5 py-4">
             <label className="flex items-center gap-2 text-sm font-medium">
               <input
@@ -295,10 +295,8 @@ export default function Registrants() {
                   <thead className="text-xs uppercase tracking-wider text-site-gray">
                     <tr>
                       <th className="w-10 px-5 py-3" />
-                      <th className="px-3 py-3 font-medium">{t("Nombre", "Nom")}</th>
+                      <th className="px-3 py-3 font-medium">{t("Nombre · inscripción", "Nom · inscription")}</th>
                       <th className="px-3 py-3 font-medium">Email</th>
-                      <th className="px-3 py-3 font-medium">{t("Idioma", "Langue")}</th>
-                      <th className="px-3 py-3 font-medium">{t("Inscripción", "Inscription")}</th>
                       <th className="px-3 py-3 font-medium">{t("Último envío", "Dernier envoi")}</th>
                       <th className="w-10 px-3 py-3" />
                     </tr>
@@ -317,20 +315,19 @@ export default function Registrants() {
                           />
                         </td>
                         <td className="px-3 py-3">
-                          <span className="block max-w-[11rem] truncate font-medium" title={`${r.firstName} ${r.lastName}`}>
+                          <span className="block max-w-[12rem] truncate font-medium" title={`${r.firstName} ${r.lastName}`}>
                             {r.firstName} {r.lastName}
+                          </span>
+                          <span className="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-xs text-site-gray">
+                            <LangBadge lang={r.lang} /> {formatDateTime(r.createdAt, locale)}
                           </span>
                         </td>
                         <td className="px-3 py-3 text-site-text">
-                          <span className="block max-w-[14rem] truncate" title={r.email}>
+                          <span className="block max-w-[13rem] truncate 2xl:max-w-[18rem]" title={r.email}>
                             {r.email}
                           </span>
                           {r.unsubscribedAt && <Badge className="mt-1">{t("Baja", "Désinscrit")}</Badge>}
                         </td>
-                        <td className="px-3 py-3">
-                          <LangBadge lang={r.lang} />
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-site-gray">{formatDateTime(r.createdAt, locale)}</td>
                         <td className="px-3 py-3">
                           <EmailStatus {...(r.lastEmail ?? {})} />
                         </td>

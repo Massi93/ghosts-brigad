@@ -115,7 +115,7 @@ export function loadConfig(env = {}) {
       // Diffusion en "mesh" WebRTC : chaque viewer reçoit un flux direct depuis le navigateur de Dani.
       maxViewers: Math.max(1, int(env.MAX_VIEWERS, 50)),
       // Connexions simultanées max depuis une même IP publique (anti-accaparement des places).
-      maxViewersPerIp: Math.max(1, int(env.MAX_VIEWERS_PER_IP, 5)),
+      maxViewersPerIp: Math.max(1, int(env.MAX_VIEWERS_PER_IP, 8)),
       // Délai avant de terminer automatiquement un live dont la caméra s'est déconnectée.
       graceSeconds: int(env.LIVE_GRACE_SECONDS, 180),
       // Un live programmé non démarré est marqué "manqué" après ce délai.

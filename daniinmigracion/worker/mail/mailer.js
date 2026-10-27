@@ -37,20 +37,25 @@ export function initMailer() {
 
 const queue = [];
 let running = false;
+let lastSentAt = 0;
 
 async function runQueue() {
   if (running) return;
   running = true;
-  const delay = Math.ceil(1000 / config.mail.ratePerSecond);
+  // Débit max du fournisseur (MAIL_RATE_PER_SECOND), compté depuis le dernier envoi :
+  // les rappels et les envois manuels arrivent un par un, la file reste souvent vide.
+  const delay = config.mail.mode === "console" ? 0 : Math.ceil(1000 / config.mail.ratePerSecond);
   try {
     while (queue.length) {
+      const wait = lastSentAt + delay - Date.now();
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
       const job = queue.shift();
+      lastSentAt = Date.now();
       try {
         job.resolve(await deliver(job.message));
       } catch (err) {
         job.reject(err);
       }
-      if (queue.length) await new Promise((r) => setTimeout(r, delay));
     }
   } finally {
     running = false;

@@ -130,10 +130,20 @@ export function sendManualBatch({ registrationIds, subject, message, liveId = nu
 }
 
 /** Email de test vers une adresse quelconque (vérification de la configuration d'envoi). */
-export async function sendTestEmail(to) {
-  const content = testEmail();
+export async function sendTestEmail(to, lang) {
+  const content = testEmail(lang === "fr" ? "fr" : "es");
   const logId = createLog({ kind: "test", to, subject: content.subject });
   return deliverLogged(logId, to, content);
+}
+
+/**
+ * Au démarrage d'une nouvelle instance : les emails restés « en attente » appartenaient
+ * à la file en mémoire de l'instance précédente, ils ne partiront plus.
+ */
+export function failInterruptedMails() {
+  return db
+    .prepare("UPDATE email_logs SET status = 'failed', error = 'Envío interrumpido (reinicio del servidor)' WHERE status = 'pending'")
+    .run().changes;
 }
 
 /** Statuts d'un lot d'envoi manuel. */

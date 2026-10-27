@@ -15,6 +15,7 @@ import {
   SECURITY_HEADERS,
   clientIp,
   createRouter,
+  discardBody,
   errorResponse,
   isOwnOrigin,
   json,
@@ -32,7 +33,7 @@ import { hasOpenRecordings, initRecordings, sweepIdleRecordings } from "./live/r
 import { refreshIceServers } from "./live/iceServers.js";
 import { locateRequest } from "./live/geo.js";
 import { initMailer, pendingMailCount } from "./mail/mailer.js";
-import { mailEvents } from "./mail/notifications.js";
+import { failInterruptedMails, mailEvents } from "./mail/notifications.js";
 import { checkReminders, nextReminderCheck } from "./mail/reminders.js";
 
 const API_PREFIX = "/api/live";
@@ -64,8 +65,10 @@ export class LiveHub extends DurableObject {
     ctx.blockConcurrencyWhile(async () => {
       await initAdminPassword();
       purgeExpiredSessions();
+      const interrupted = failInterruptedMails();
+      if (interrupted) console.warn(`[mail] ${interrupted} email(s) interrompu(s) par le redémarrage`);
       live.restoreAfterRestart();
-      this.scheduleAlarm();
+      await this.scheduleAlarm();
     });
     refreshIceServers(); // relais TURN Cloudflare si configurés (sans bloquer)
   }
@@ -78,7 +81,8 @@ export class LiveHub extends DurableObject {
     registerPublicLiveRoutes(router);
     registerPublicRegistrationRoutes(router);
     registerAdminRoutes(router);
-    registerAdminLiveRoutes(router, { onScheduleChanged: () => this.scheduleAlarm() });
+    // Live créé, déplacé ou annulé : passage immédiat (rappel « 3 h » si l'on est déjà dans la fenêtre).
+    registerAdminLiveRoutes(router, { onScheduleChanged: () => this.ctx.waitUntil(this.tick()) });
     registerAdminRegistrationRoutes(router);
     return router;
   }
@@ -92,6 +96,9 @@ export class LiveHub extends DurableObject {
       return withHeaders(response, SECURITY_HEADERS);
     } catch (err) {
       return withHeaders(errorResponse(err), SECURITY_HEADERS);
+    } finally {
+      // Requête refusée sans lire son corps (403, 404, 429…) : on l'abandonne proprement.
+      discardBody(request);
     }
   }
 
@@ -153,20 +160,29 @@ export class LiveHub extends DurableObject {
 
   /* ------------------------------ Réveils ------------------------------ */
 
-  /** Programme le prochain réveil (alarme Cloudflare) selon ce qui reste à faire. */
-  scheduleAlarm() {
-    try {
-      const now = Date.now();
-      const candidates = [nextReminderCheck(now), live.graceDeadline()];
-      if (live.getActiveLiveId() || hasOpenRecordings() || pendingMailCount() > 0) {
-        candidates.push(now + HOUSEKEEPING_MS);
-      }
-      const next = candidates.filter((t) => Number.isFinite(t)).reduce((a, b) => Math.min(a, b), Infinity);
-      if (Number.isFinite(next)) this.ctx.storage.setAlarm(Math.max(next, now + 1000));
-      else this.ctx.storage.deleteAlarm();
-    } catch (err) {
-      console.error("[alarme] Programmation impossible :", err?.stack || err);
-    }
+  /**
+   * Programme le prochain réveil (alarme Cloudflare) selon ce qui reste à faire.
+   *
+   * Une alarme déjà prévue plus tôt (ou déjà échue) est gardée : la repousser l'annulerait,
+   * et une nouvelle instance qui démarre pour la traiter la décalerait sans fin. Seul
+   * `tick()` (`force`), qui vient de tout traiter, remplace ou supprime l'alarme.
+   */
+  scheduleAlarm({ force = false } = {}) {
+    this.alarmUpdate = (this.alarmUpdate ?? Promise.resolve())
+      .then(async () => {
+        const now = Date.now();
+        const candidates = [nextReminderCheck(now), live.graceDeadline()];
+        if (live.getActiveLiveId() || hasOpenRecordings() || pendingMailCount() > 0) {
+          candidates.push(now + HOUSEKEEPING_MS);
+        }
+        const next = candidates.filter((t) => Number.isFinite(t)).reduce((a, b) => Math.min(a, b), Infinity);
+        const current = await this.ctx.storage.getAlarm();
+        if (!force && current != null && current <= next) return;
+        if (Number.isFinite(next)) await this.ctx.storage.setAlarm(Math.max(next, now + 1000));
+        else if (force) await this.ctx.storage.deleteAlarm();
+      })
+      .catch((err) => console.error("[alarme] Programmation impossible :", err?.stack || err));
+    return this.alarmUpdate;
   }
 
   async alarm() {
@@ -189,7 +205,7 @@ export class LiveHub extends DurableObject {
         console.error("[tick]", err?.stack || err);
       } finally {
         this.ticking = null;
-        this.scheduleAlarm();
+        await this.scheduleAlarm({ force: true });
       }
     })();
     return this.ticking;

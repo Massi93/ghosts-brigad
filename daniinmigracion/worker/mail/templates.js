@@ -41,8 +41,9 @@ function formatShortDate(iso, lang) {
   }).format(new Date(iso));
 }
 
-function liveUrl() {
-  return `${config.publicUrl}/live`;
+/** Page du live, dans la langue de l'inscrit (la page /live lit `?lang=`). */
+function liveUrl(lang = "es") {
+  return `${config.publicUrl}/live?lang=${lang}`;
 }
 
 export function unsubscribeUrl(token) {
@@ -110,11 +111,11 @@ export function confirmationEmail(registration, live) {
     preheader: t.confirmPreheader,
     bodyHtml: `${h1(escapeHtml(t.hello(name)) + " 🎉")}${p(intro)}${p(t.confirmReminders, true)}`,
     ctaLabel: when ? t.seeLivePage : null,
-    ctaUrl: when ? liveUrl() : null,
+    ctaUrl: when ? liveUrl(lang) : null,
     unsubscribeToken: registration.unsubscribe_token,
   });
   const text = `${t.hello(name)}\n\n${
-    when ? `${t.confirmReservedText(live.title, when)}\n${t.link}: ${liveUrl()}` : t.confirmNoDate
+    when ? `${t.confirmReservedText(live.title, when)}\n${t.link}: ${liveUrl(lang)}` : t.confirmNoDate
   }\n\n${t.confirmRemindersText}${textFooter(lang, registration.unsubscribe_token)}`;
   return { subject, html, text, unsubscribeUrl: unsubscribeUrl(registration.unsubscribe_token) };
 }
@@ -127,6 +128,22 @@ export function reminderEmail(registration, live, kind, msBefore) {
   const soon = kind === "reminder_5m";
   const remaining = formatRemaining(msBefore, lang);
   const when = formatLiveDate(live.scheduled_at, lang);
+  if (live.status === "live") {
+    // Dani a lancé le live avant l'heure prévue.
+    return {
+      subject: t.liveNowSubject,
+      html: layout({
+        lang,
+        preheader: t.liveNowPreheader,
+        bodyHtml: `${h1(escapeHtml(t.liveNowHeading(name)))}${p(t.liveNowBody(escapeHtml(live.title)), true)}`,
+        ctaLabel: t.enterLive,
+        ctaUrl: liveUrl(lang),
+        unsubscribeToken: registration.unsubscribe_token,
+      }),
+      text: `${t.liveNowText(name, live.title, liveUrl(lang))}${textFooter(lang, registration.unsubscribe_token)}`,
+      unsubscribeUrl: unsubscribeUrl(registration.unsubscribe_token),
+    };
+  }
   const subject = soon ? t.reminderSubject5m(remaining) : t.reminderSubject3h(remaining);
   const html = layout({
     lang,
@@ -135,18 +152,21 @@ export function reminderEmail(registration, live, kind, msBefore) {
       t.reminderBody(escapeHtml(live.title), escapeHtml(remaining))
     )}${p(`📅 ${escapeHtml(when)}`, true)}`,
     ctaLabel: soon ? t.enterLive : t.openLivePage,
-    ctaUrl: liveUrl(),
+    ctaUrl: liveUrl(lang),
     unsubscribeToken: registration.unsubscribe_token,
   });
-  const text = `${t.reminderText(name, live.title, remaining, when, liveUrl())}${textFooter(lang, registration.unsubscribe_token)}`;
+  const text = `${t.reminderText(name, live.title, remaining, when, liveUrl(lang))}${textFooter(lang, registration.unsubscribe_token)}`;
   return { subject, html, text, unsubscribeUrl: unsubscribeUrl(registration.unsubscribe_token) };
 }
 
 /** Email manuel envoyé depuis le cockpit. `message` est du texte brut (écrit par Dani). */
 export function manualEmail(registration, { subject, message }) {
   const lang = normalizeLang(registration.lang);
-  // {nombre} (ou {prenom} / {prénom}) = prénom de l'inscrit.
-  const personalized = message.replace(/\{(nombre|pr[ée]nom)\}/gi, registration.first_name);
+  // {nombre} (ou {prenom} / {prénom}) = prénom de l'inscrit, dans le message et l'objet.
+  // (fonction de remplacement : un « $ » dans le prénom reste un simple caractère)
+  const fill = (text) => text.replace(/\{(nombre|pr[ée]nom)\}/gi, () => registration.first_name);
+  const personalized = fill(message);
+  subject = fill(subject);
   const paragraphs = personalized
     .split(/\n{2,}/)
     .map((para) => p(escapeHtml(para).replace(/\n/g, "<br>")))
@@ -156,10 +176,10 @@ export function manualEmail(registration, { subject, message }) {
     preheader: subject,
     bodyHtml: paragraphs,
     ctaLabel: T[lang].goLivePage,
-    ctaUrl: liveUrl(),
+    ctaUrl: liveUrl(lang),
     unsubscribeToken: registration.unsubscribe_token,
   });
-  const text = `${personalized}\n\n${liveUrl()}${textFooter(lang, registration.unsubscribe_token)}`;
+  const text = `${personalized}\n\n${liveUrl(lang)}${textFooter(lang, registration.unsubscribe_token)}`;
   return { subject, html, text, unsubscribeUrl: unsubscribeUrl(registration.unsubscribe_token) };
 }
 
@@ -178,18 +198,23 @@ export function resubscribeEmail(registration) {
   return { subject: t.resubscribeSubject, html, text: t.resubscribeText(registration.first_name, url) };
 }
 
-/** Email de test (configuration de l'envoi). */
-export function testEmail() {
-  const subject = "Prueba de envío · Cockpit Dani Inmigración";
+/** Email de test (configuration de l'envoi), dans la langue du cockpit. */
+export function testEmail(lang = "es") {
+  const fr = lang === "fr";
+  const subject = fr ? "Test d'envoi · Cockpit Dani Inmigración" : "Prueba de envío · Cockpit Dani Inmigración";
+  const mode = escapeHtml(config.mail.mode);
   const html = layout({
-    lang: "es",
+    lang: fr ? "fr" : "es",
     preheader: subject,
-    bodyHtml: `${h1("¡Funciona! ✅")}${p(
-      `La configuración de correo del cockpit está lista (modo <strong>${escapeHtml(config.mail.mode)}</strong>).`,
+    bodyHtml: `${h1(fr ? "Ça marche ! ✅" : "¡Funciona! ✅")}${p(
+      fr
+        ? `La configuration des e-mails du cockpit est prête (mode <strong>${mode}</strong>).`
+        : `La configuración de correo del cockpit está lista (modo <strong>${mode}</strong>).`,
       true
     )}`,
   });
-  return { subject, html, text: `¡Funciona! Modo de correo: ${config.mail.mode}.` };
+  const text = fr ? `Ça marche ! Mode d'envoi : ${config.mail.mode}.` : `¡Funciona! Modo de correo: ${config.mail.mode}.`;
+  return { subject, html, text };
 }
 
 /** Petite page HTML autonome (désinscription / réinscription), aux couleurs du site. */

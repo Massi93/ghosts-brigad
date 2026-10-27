@@ -60,7 +60,7 @@ export function registerAdminRoutes(router) {
   });
 
   router.add("POST", "/admin/mail/test", async ({ body }) => {
-    const result = await sendTestEmail(requireEmail(body?.to));
+    const result = await sendTestEmail(requireEmail(body?.to), body?.lang);
     if (result.status !== "sent") {
       throw new HttpError(502, `No se pudo enviar: ${result.error}`, "mail_failed");
     }

@@ -3,7 +3,7 @@
  *  - publiques : POST /api/live/public/registrations, /public/unsubscribe, /public/resubscribe
  *  - cockpit   : /api/live/admin/registrations (+ .csv), /admin/notify
  */
-import { HttpError, html, json, optionalText, requireEmail, requireId, requireString } from "../lib/http.js";
+import { HttpError, html, ipKey, json, optionalText, requireEmail, requireId, requireString } from "../lib/http.js";
 import { createRateLimiter } from "../lib/rateLimit.js";
 import { confirmForm, escapeHtml, standalonePage } from "../mail/templates.js";
 import { T, normalizeLang } from "../mail/i18n.js";
@@ -34,7 +34,7 @@ export function registerPublicRegistrationRoutes(router) {
     // Champ piège invisible : rempli uniquement par les robots.
     if (body.website) return json({ ok: true }, 201);
 
-    if (registerLimiter.isBlocked(ip)) {
+    if (registerLimiter.isBlocked(ipKey(ip))) {
       throw new HttpError(429, "Demasiadas inscripciones. Inténtalo más tarde.", "rate_limited");
     }
 
@@ -42,7 +42,7 @@ export function registerPublicRegistrationRoutes(router) {
     const lastName = requireString(body.lastName, "apellido", { max: 80 });
     const email = requireEmail(body.email);
     const lang = normalizeLang(body.lang);
-    registerLimiter.hit(ip);
+    registerLimiter.hit(ipKey(ip));
 
     const live = getActiveLive() ?? getNextScheduled();
     const { registration, action } = upsertRegistration({
@@ -104,12 +104,13 @@ export function registerPublicRegistrationRoutes(router) {
 export function registerAdminRegistrationRoutes(router) {
   router.add("GET", "/admin/registrations", () => json({ registrations: listRegistrations() }));
 
-  router.add("GET", "/admin/registrations.csv", () => {
+  router.add("GET", "/admin/registrations.csv", ({ url }) => {
     const date = new Date().toISOString().slice(0, 10);
-    return new Response(registrationsCsv(), {
+    const fr = url.searchParams.get("lang") === "fr";
+    return new Response(registrationsCsv(fr ? "fr" : "es"), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="inscritos-live-${date}.csv"`,
+        "Content-Disposition": `attachment; filename="${fr ? "inscrits" : "inscritos"}-live-${date}.csv"`,
         "Cache-Control": "no-store",
       },
     });

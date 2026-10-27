@@ -15,7 +15,7 @@
  */
 import * as live from "./liveService.js";
 import { isSessionValid } from "../auth/sessions.js";
-import { HttpError } from "../lib/http.js";
+import { HttpError, ipKey } from "../lib/http.js";
 import { randomToken } from "../lib/crypto.js";
 import { finishAllForLive, recordingEvents } from "./recordings.js";
 import { getIceServers } from "./iceServers.js";
@@ -29,6 +29,7 @@ const HEARTS_BUCKET = { capacity: 30, refillPerSecond: 12 }; // anti-spam par vi
 const MESSAGE_BUCKET = { capacity: 60, refillPerSecond: 30 }; // messages max par connexion
 const MAX_MESSAGE_BYTES = 64 * 1024; // signalisation uniquement (la vidéo ne passe pas par ici)
 const IDLE_TIMEOUT_MS = 60_000; // le client envoie un « ping » toutes les 20 s
+const MAX_PUBLIC_SOCKETS_PER_IP = 40; // par IPv4 ou réseau IPv6 /64 (onglets, familles, wifi partagé)
 
 // Codes de fermeture compris par le client.
 export const CLOSE_SERVER_DISCONNECT = 4000; // déconnexion voulue : pas de reconnexion automatique
@@ -125,6 +126,8 @@ class Connection {
     if (!Array.isArray(packet) || typeof packet[0] !== "string") return;
     const [event, data, ackId] = packet;
     if (event === "__ping") {
+      // Cockpit : une session expirée ne reçoit plus rien, même si l'onglet ne fait que « pinguer ».
+      if (this.guard && !this.guard()) return;
       this.send(["__pong"]);
       return;
     }
@@ -257,6 +260,8 @@ export function setupSockets() {
     for (const map of [pub, cockpit]) {
       for (const conn of [...map.values()]) if (conn.lastSeen < limit) conn.close(1001, "idle");
     }
+    // Cockpit : sessions expirées entre deux messages.
+    for (const conn of [...cockpit.values()]) conn.guard?.();
   }
 
   // Envoi groupé des cœurs : chaque viewer reçoit les cœurs des AUTRES
@@ -274,6 +279,12 @@ export function setupSockets() {
   /* -------------------------- Espace public -------------------------- */
 
   function acceptPublic(info) {
+    if (!["127.0.0.1", "::1"].includes(info.ip)) {
+      const key = ipKey(info.ip);
+      let same = 0;
+      for (const c of pub.values()) if (ipKey(c.ip) === key) same += 1;
+      if (same >= MAX_PUBLIC_SOCKETS_PER_IP) return new Response("Demasiadas conexiones", { status: 429 });
+    }
     const { conn, response } = acceptSocket(info);
     pub.set(conn.id, conn);
     updateTimers();
@@ -298,6 +309,8 @@ export function setupSockets() {
       viewersRoom.add(conn.id);
       updateTimers();
       reply({ ok: true, iceServers: getIceServers() });
+      // Le compteur envoyé juste avant (addViewer) ne comptait pas encore ce viewer.
+      conn.emit("live:stats", live.getStats());
 
       // Si Dani diffuse déjà, on lui demande d'ouvrir une connexion vers ce viewer.
       const broadcaster = live.getBroadcasterSocketId();

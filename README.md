@@ -152,8 +152,11 @@ L'adresse d'expédition se règle avec `MAIL_FROM` (domaine vérifié chez le fo
 
 Règles des rappels automatiques (le Durable Object se réveille tout seul aux bons moments) :
 
-- **3 h avant** : envoyé aux inscrits arrivés avant l'ouverture de cette fenêtre. Ceux qui s'inscrivent après ont déjà reçu la confirmation avec la date. Si le live est programmé moins de 3 h à l'avance, l'email indique le temps réellement restant.
+- **3 h avant** : envoyé à tous les inscrits actifs, sauf ceux qui viennent de recevoir (dans ces 3 h) la confirmation de ce live avec sa date. Si le live est programmé ou déplacé moins de 3 h à l'avance, il part tout de suite et indique le temps réellement restant.
 - **5 min avant** : envoyé à tous les inscrits actifs.
+- **Live lancé en avance** (dans les 3 h avant l'heure prévue) : le rappel « 5 min » devient « Dani est en direct » et part dès le lancement.
+- Les liens des emails ouvrent `/live` dans la langue de l'inscrit (`/live?lang=ar`).
+- Envois cadencés à `MAIL_RATE_PER_SECOND` (5 par seconde par défaut) pour respecter les limites du fournisseur.
 - Une personne ne reçoit jamais deux fois le même rappel (index unique en base).
 - Si un live est reprogrammé, ses rappels repartent de zéro avec la nouvelle heure.
 - Les rappels passent devant un gros envoi manuel en cours.
@@ -172,7 +175,7 @@ Valeurs publiques : `vars` de `wrangler.jsonc`. Secrets : `npx wrangler secret p
 | `SITE_TIMEZONE` | fuseau des dates dans les emails |
 | `ICE_SERVERS` | serveurs STUN (WebRTC) |
 | `CLOUDFLARE_TURN_KEY_ID`, `CLOUDFLARE_TURN_API_TOKEN` (secrets) | relais TURN Cloudflare (Realtime → TURN) : vidéo garantie même en 4G ou derrière un réseau d'entreprise |
-| `MAX_VIEWERS`, `MAX_VIEWERS_PER_IP` | limites de viewers (50, et 5 par IP) |
+| `MAX_VIEWERS`, `MAX_VIEWERS_PER_IP` | limites de viewers (50, et 8 par IP ou réseau IPv6 /64) |
 | `LIVE_GRACE_SECONDS` | délai avant la fin automatique d'un live dont la caméra est perdue (180 s) |
 | `LIVE_MISSED_AFTER_MINUTES` | un live programmé jamais démarré devient « non réalisé » (120 min) |
 
@@ -196,16 +199,17 @@ Robustesse pendant un live :
 - Mot de passe jamais stocké en clair : hash **PBKDF2-SHA256** (100 000 itérations) dans un secret Cloudflare. Changer le mot de passe ferme toutes les sessions.
 - Session : jeton aléatoire de 256 bits dans un cookie `HttpOnly` + `SameSite=Strict` + `Secure` (HTTPS). La base ne stocke que le hash SHA-256 du jeton.
 - Session vérifiée à chaque action du cockpit, y compris en temps réel : après une déconnexion ou un changement de mot de passe, les connexions ouvertes sont coupées.
-- Anti brute-force : 5 essais par IP sur 15 min (comptés même en requêtes parallèles). Les requêtes venant d'un autre site sont refusées.
-- Un avertissement s'affiche dans le cockpit tant que le mot de passe de démonstration est utilisé.
+- Anti brute-force : 5 essais sur 15 min par IP (en IPv6 : par réseau /64), comptés même en requêtes parallèles, plus un budget global de vérifications par seconde pour qu'une rafale de faux logins ne ralentisse jamais le live. Les requêtes venant d'un autre site sont refusées.
+- ⚠️ Le dépôt est public : le mot de passe de démonstration (`daniinmigracion`) est connu de tous. **Avant la mise en ligne**, en choisir un autre avec `npm run cockpit:password -- "…"`. Un avertissement s'affiche dans le cockpit tant que le mot de passe de démonstration est utilisé.
+- Corps des requêtes lus morceau par morceau et coupés au-delà de la limite (100 Ko en JSON) : un envoi énorme ne peut pas saturer la mémoire du serveur.
 - Formulaire d'inscription :
-  - limité à 10 par IP et par heure, avec un champ piège anti-robots ;
+  - limité à 10 par IP (ou réseau IPv6 /64) et par heure, avec un champ piège anti-robots ;
   - il ne peut pas modifier une inscription existante ;
   - une adresse désinscrite reçoit un lien pour confirmer elle-même sa réinscription.
 - Désinscription en deux temps (page de confirmation) : les antivirus de messagerie qui ouvrent les liens automatiquement ne désinscrivent personne.
 - Viewers :
   - la salle d'attente ouvre 1 h avant le live ;
-  - 5 connexions max par IP ;
+  - 8 spectateurs max par IP ou réseau IPv6 /64 (`MAX_VIEWERS_PER_IP`), 40 connexions ouvertes max ;
   - messages limités par connexion, et renégociations vidéo limitées.
 - Export CSV protégé contre l'injection de formules Excel. IP des viewers masquées dans le cockpit (`81.23.x.x`).
 
@@ -228,6 +232,9 @@ Les vrais composants de la page `/live` et du cockpit tournent avec un serveur s
 - **Nombre de viewers** : en mesh, Dani envoie un flux par viewer (environ 1,5 Mbit/s chacun en montée). C'est confortable jusqu'à une vingtaine de viewers avec une bonne connexion (plafond `MAX_VIEWERS`). Au-delà, il faudra un serveur média (SFU, par exemple Cloudflare Realtime).
 - **Géolocalisation** : en local, les viewers apparaissent « Local (este equipo) ». En ligne, Cloudflare fournit la ville et le pays.
 - **Réseaux restrictifs** : sans relais TURN, certains viewers (réseaux d'entreprise, certains opérateurs 4G) peuvent ne pas recevoir la vidéo. Il suffit d'ajouter les clés TURN Cloudflare.
+- **Limites de débit en mémoire** : les compteurs (login, inscriptions) repartent de zéro si le serveur du live redémarre.
+- **Inscriptions sans double confirmation** : n'importe qui peut inscrire une adresse (chaque email contient un lien de désinscription).
+- **Emails en échec** : un rappel qui échoue (fournisseur indisponible) n'est pas renvoyé automatiquement ; il apparaît « Error » dans le cockpit et peut être renvoyé à la main.
 
 ## Les autres projets du dépôt
 
