@@ -96,7 +96,7 @@ export default function Recordings() {
 
                 <div className="flex gap-2">
                   <a
-                    href={`/api/admin/recordings/${r.id}/file?download=1`}
+                    href={apiFileUrl(`/admin/recordings/${r.id}/file?download=1`)}
                     className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold hover:bg-brand-400 ${
                       r.status === "ready" ? "" : "pointer-events-none opacity-50"
                     }`}

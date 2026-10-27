@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, Eye, EyeOff, KeyRound, Mail, Save, Send } from "lucide-react";
-import { api } from "../../lib/api";
-import { Badge, Button, Card, Field, SectionTitle, inputClass, useToast } from "../ui";
+import { ExternalLink, Eye, EyeOff, Inbox, KeyRound, Mail, Save, Send, ShieldAlert } from "lucide-react";
+import { api, apiFileUrl } from "../../lib/api";
+import { Button, Card, Field, MailModeBadge, SectionTitle, inputClass, useToast } from "../ui";
+import { formatDateTime } from "../../lib/time";
 
 /** Réglages du site (rubrique « Próximo live ») et vérification de l'email. */
 export default function SiteSettings() {
@@ -9,16 +10,27 @@ export default function SiteSettings() {
   const [settings, setSettings] = useState(null);
   const [saving, setSaving] = useState(false);
   const [mail, setMail] = useState(null);
+  const [defaultPassword, setDefaultPassword] = useState(false);
   const [testTo, setTestTo] = useState("");
   const [testing, setTesting] = useState(false);
+  const [outbox, setOutbox] = useState([]);
+
+  const loadOutbox = () =>
+    api("/admin/mail/outbox")
+      .then((res) => setOutbox(res.mails))
+      .catch(() => {});
 
   useEffect(() => {
     api("/admin/settings")
       .then((res) => setSettings(res.settings))
       .catch((err) => toast(err.message, "error"));
     api("/admin/overview")
-      .then((res) => setMail(res.mail))
+      .then((res) => {
+        setMail(res.mail);
+        setDefaultPassword(res.defaultPassword);
+      })
       .catch(() => {});
+    loadOutbox();
   }, [toast]);
 
   const save = async (e) => {
@@ -41,10 +53,11 @@ export default function SiteSettings() {
     try {
       const res = await api("/admin/mail/test", { method: "POST", body: { to: testTo } });
       toast(
-        res.mode === "smtp"
+        res.mode !== "console"
           ? `Correo de prueba enviado a ${testTo}`
-          : "Modo consola: el correo se guardó en storage/mails/ (no se envió)"
+          : "Modo consola: el correo aparece abajo en « Correos de prueba » (no se envió)"
       );
+      loadOutbox();
     } catch (err) {
       toast(err.message, "error");
     } finally {
@@ -117,7 +130,7 @@ export default function SiteSettings() {
               {mail && (
                 <p className="text-sm text-white/60">
                   Modo actual:{" "}
-                  {mail.mode === "smtp" ? <Badge tone="success">SMTP · {mail.host}</Badge> : <Badge tone="warning">Consola</Badge>}
+                  <MailModeBadge mail={mail} />
                 </p>
               )}
               <Field label="Enviar a">
@@ -133,7 +146,9 @@ export default function SiteSettings() {
               <Button type="submit" icon={Send} loading={testing} variant="ghost">
                 Enviar prueba
               </Button>
-              <p className="text-xs text-white/40">La configuración SMTP se hace en el archivo .env (ver README, sección « Live »).</p>
+              <p className="text-xs text-white/40">
+                El envío real se configura en Cloudflare (variables MAIL_MODE, SMTP… ver README, sección « Live »).
+              </p>
             </form>
           </Card>
 
@@ -141,8 +156,14 @@ export default function SiteSettings() {
             <p className="flex items-center gap-2 font-display text-lg font-bold">
               <KeyRound className="h-5 w-5 text-brand-300" /> Seguridad
             </p>
+            {defaultPassword && (
+              <p className="flex items-start gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-red-200">
+                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                Usas la contraseña de demostración. Cámbiala antes de anunciar el live.
+              </p>
+            )}
             <p className="text-white/60">
-              Para cambiar la contraseña del cockpit, ejecuta en el servidor:
+              Para cambiar la contraseña del cockpit, ejecuta en el proyecto (se guarda cifrada en Cloudflare):
             </p>
             <code className="rounded-xl bg-black/40 px-3 py-2 text-xs text-brand-100">
               npm run cockpit:password -- "nueva-contraseña"
@@ -156,6 +177,42 @@ export default function SiteSettings() {
               </a>
             </div>
           </Card>
+
+          {mail?.mode === "console" && (
+            <Card className="flex flex-col gap-3 text-sm">
+              <p className="flex items-center gap-2 font-display text-lg font-bold">
+                <Inbox className="h-5 w-5 text-brand-300" /> Correos de prueba
+              </p>
+              <p className="text-white/60">
+                Modo consola: estos son los últimos correos que se habrían enviado (confirmaciones, recordatorios,
+                envíos manuales). Nadie los recibe.
+              </p>
+              {outbox.length === 0 ? (
+                <p className="text-white/40">Todavía no hay ninguno.</p>
+              ) : (
+                <ul className="flex max-h-72 flex-col divide-y divide-white/5 overflow-y-auto">
+                  {outbox.map((m) => (
+                    <li key={m.id} className="flex items-center justify-between gap-3 py-2">
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold">{m.subject}</span>
+                        <span className="block truncate text-xs text-white/50">
+                          {m.toEmail} · {formatDateTime(m.createdAt)}
+                        </span>
+                      </span>
+                      <a
+                        href={apiFileUrl(`/admin/mail/outbox/${m.id}`)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 rounded-lg border border-white/15 px-2.5 py-1 text-xs font-semibold"
+                      >
+                        Ver
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
         </div>
       </div>
     </div>

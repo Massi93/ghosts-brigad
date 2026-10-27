@@ -3,7 +3,7 @@ import { CalendarClock, ExternalLink, Film, Heart, Mail, Radio, TrendingUp, User
 import { api } from "../../lib/api";
 import { formatBytes, formatDateTime, formatDuration, formatLiveDate, splitDuration, useNow } from "../../lib/time";
 import { useCockpit } from "../CockpitContext";
-import { Badge, Card, SectionTitle, Stat, useToast } from "../ui";
+import { Badge, Card, MailModeBadge, SectionTitle, Stat, useToast } from "../ui";
 
 function countdownLabel(ms) {
   const { days, hours, minutes, seconds } = splitDuration(ms);
@@ -148,11 +148,7 @@ export default function Overview() {
             <div className="mt-4 flex flex-col gap-2 text-sm">
               <p>
                 Modo:{" "}
-                {data.mail.mode === "smtp" ? (
-                  <Badge tone="success">SMTP · {data.mail.host}</Badge>
-                ) : (
-                  <Badge tone="warning">Consola (prueba, no se envía nada)</Badge>
-                )}
+                <MailModeBadge mail={data.mail} />
               </p>
               <p className="text-white/60">Remitente: {data.mail.from}</p>
               <p className="text-white/60">

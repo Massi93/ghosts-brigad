@@ -3,7 +3,7 @@
  * et enregistrement automatique.
  *
  * Architecture « mesh » : une RTCPeerConnection par viewer, ouverte par Dani.
- * Le serveur relaie uniquement la signalisation (Socket.io).
+ * Le serveur relaie uniquement la signalisation (WebSocket).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { emitWithAck } from "../lib/socket";
@@ -38,7 +38,7 @@ function mediaErrorMessage(err) {
 }
 
 /**
- * @param {import("socket.io-client").Socket} socket  socket `/cockpit`
+ * @param {import("../lib/socket.js").LiveSocket} socket  socket du cockpit
  * @param {RTCIceServer[]} iceServers
  */
 export function useBroadcaster(socket, iceServers) {

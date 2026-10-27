@@ -1,0 +1,49 @@
+// Configuration Cloudflare du serveur Live (Worker « dani-live »).
+// Déploiement : npm run deploy   (voir README, section « Live »)
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dani-live",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+
+  // Application du Live compilée par Vite (npm run build → dist/live/…).
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "none",
+    "not_found_handling": "none"
+  },
+
+  // Le cœur du Live : état temps réel + base SQLite intégrée.
+  "durable_objects": {
+    "bindings": [{ "name": "LIVE_HUB", "class_name": "LiveHub" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["LiveHub"] }],
+
+  // Enregistrements vidéo des lives.
+  "r2_buckets": [{ "binding": "RECORDINGS", "bucket_name": "dani-live-recordings" }],
+
+  // Filet de sécurité : réveil du Live toutes les 10 minutes (rappels par email…).
+  "triggers": { "crons": ["*/10 * * * *"] },
+
+  // Adresse de test : https://dani-live.<compte>.workers.dev (le site reste www.daniinmigracion.com).
+  "workers_dev": true,
+  "observability": { "enabled": true },
+
+  // Valeurs publiques. Les secrets (mot de passe, SMTP…) : npx wrangler secret put NOM
+  "vars": {
+    "PUBLIC_URL": "https://www.daniinmigracion.com",
+    "ADMIN_USERNAME": "dani",
+    "SITE_TIMEZONE": "Europe/Madrid",
+    "MAIL_MODE": "console",
+    "MAIL_FROM": "Dani Inmigración <live@daniinmigracion.com>",
+    "ICE_SERVERS": "stun:stun.cloudflare.com:3478,stun:stun.l.google.com:19302",
+    "MAX_VIEWERS": "50",
+    "MAX_VIEWERS_PER_IP": "5",
+    "LIVE_GRACE_SECONDS": "180",
+    "LIVE_MISSED_AFTER_MINUTES": "120",
+    "SESSION_TTL_HOURS": "12",
+    "COOKIE_SECURE": "auto"
+  }
+}

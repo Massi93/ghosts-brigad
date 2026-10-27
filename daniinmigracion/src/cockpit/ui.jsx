@@ -74,6 +74,19 @@ export function Badge({ tone = "neutral", children, className = "", ...props }) 
   );
 }
 
+/** Mode d'envoi des emails (console = test, rien n'est envoyé). */
+export function MailModeBadge({ mail }) {
+  if (!mail) return null;
+  if (mail.mode === "console") return <Badge tone="warning">Consola (prueba, no se envía nada)</Badge>;
+  const label = { smtp: "SMTP", brevo: "Brevo", resend: "Resend" }[mail.mode] ?? mail.mode;
+  return (
+    <Badge tone="success">
+      {label}
+      {mail.mode === "smtp" && mail.host ? ` · ${mail.host}` : ""}
+    </Badge>
+  );
+}
+
 export function Stat({ icon: Icon, label, value, hint, tone = "text-brand-200" }) {
   return (
     <Card className="flex flex-col gap-2 p-4">

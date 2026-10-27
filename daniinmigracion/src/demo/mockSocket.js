@@ -1,6 +1,6 @@
 /**
  * Remplace src/lib/socket.js dans la démo : des « sockets » en mémoire qui
- * parlent au serveur simulé, avec la même interface que socket.io-client
+ * parlent au serveur simulé, avec la même interface que src/lib/socket.js
  * (on / off / emit / timeout / connect / disconnect).
  */
 import { attachSocket, detachSocket, handleSocketEvent } from "./demoServer.js";

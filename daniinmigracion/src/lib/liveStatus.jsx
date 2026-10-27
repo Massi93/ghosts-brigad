@@ -1,6 +1,6 @@
 /**
  * État public du live partagé par le site (bouton LIVE, rubrique « Próximo live »)
- * et la page /live. Mis à jour en temps réel via Socket.io.
+ * et la page /live. Mis à jour en temps réel via WebSocket.
  */
 import { createContext, useContext, useEffect, useState } from "react";
 import { getPublicSocket } from "./socket";

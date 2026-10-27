@@ -8,3 +8,7 @@ dist
 .env
 storage/
 dist-demo
+
+# Cloudflare (wrangler) : variables locales et état des émulateurs
+.dev.vars
+.wrangler/

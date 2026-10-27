@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Clock, Download, Mail, Search, Send, Trash2, Users, XCircle } from "lucide-react";
-import { api } from "../../lib/api";
+import { api, apiFileUrl } from "../../lib/api";
 import { formatDateTime, formatLiveDate } from "../../lib/time";
 import { useCockpit } from "../CockpitContext";
 import { Badge, Button, Card, EmptyState, Field, SectionTitle, inputClass, useToast } from "../ui";
@@ -192,7 +192,7 @@ export default function Registrants() {
         subtitle={`${activeCount} activos · ${rows.length} en total`}
         actions={
           <a
-            href="/api/admin/registrations.csv"
+            href={apiFileUrl("/admin/registrations.csv")}
             className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold hover:bg-white/10"
           >
             <Download className="h-4 w-4" /> Exportar CSV

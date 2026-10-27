@@ -2,12 +2,12 @@
  * Réception du flux vidéo de Dani côté viewer (WebRTC, réception seule).
  *
  * Le viewer ne demande jamais l'accès à sa caméra ni à son micro : il répond
- * simplement aux offres envoyées par le navigateur de Dani (relayées par Socket.io).
+ * simplement aux offres envoyées par le navigateur de Dani (relayées par WebSocket).
  */
 import { useEffect, useRef, useState } from "react";
 
 /**
- * @param {import("socket.io-client").Socket} socket  socket public `/live`
+ * @param {import("../lib/socket.js").LiveSocket} socket  socket public
  * @param {boolean} enabled  rejoindre la salle des viewers (un live existe)
  * @returns {{ stream: MediaStream|null, state: string }}
  *   state : "idle" | "waiting" | "connecting" | "connected" | "full"

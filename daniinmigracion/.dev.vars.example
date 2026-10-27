@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  Dani Inmigración · variables LOCALES du serveur Live (wrangler dev)
+#  Copier ce fichier en `.dev.vars` (jamais publié). En ligne, les mêmes noms
+#  se règlent avec `npx wrangler secret put NOM` (secrets) ou dans wrangler.jsonc.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Adresse utilisée dans les liens des emails.
+PUBLIC_URL=http://localhost:8787
+# En local, le cookie n'est pas « Secure » (http://).
+COOKIE_SECURE=auto
+
+# ── Cockpit (/cockpit) ───────────────────────────────────────────────────────
+# Identifiant : dani. Sans mot de passe configuré : « daniinmigracion » (démo).
+# Mot de passe hashé (recommandé) : npm run cockpit:password -- "mot-de-passe" --local
+# ADMIN_PASSWORD_HASH=pbkdf2-sha256$100000$...
+# Ou en clair (plus simple, hashé au démarrage) :
+# ADMIN_PASSWORD=mon-mot-de-passe
+
+# ── Emails ───────────────────────────────────────────────────────────────────
+# console : AUCUN email réel ; les emails sont visibles dans le cockpit
+#           (Ajustes → Correos de prueba) et dans le terminal.
+# smtp    : serveur SMTP (Brevo, Gmail, OVH, Mailtrap…)
+# brevo / resend : API HTTP du fournisseur (MAIL_API_KEY)
+MAIL_MODE=console
+MAIL_FROM="Dani Inmigración <live@daniinmigracion.com>"
+
+# Exemple Mailtrap (boîte de test : les emails sont capturés, jamais délivrés)
+# MAIL_MODE=smtp
+# SMTP_HOST=sandbox.smtp.mailtrap.io
+# SMTP_PORT=2525
+# SMTP_USER=...
+# SMTP_PASS=...
+
+# Exemple Brevo (envoi réel, 300 emails/jour gratuits)
+# MAIL_MODE=brevo
+# MAIL_API_KEY=xkeysib-...
+
+# ── Vidéo ────────────────────────────────────────────────────────────────────
+# Relais TURN de Cloudflare (vidéo garantie même en 4G / réseau d'entreprise) :
+# Cloudflare → Realtime → TURN Server → Create.
+# CLOUDFLARE_TURN_KEY_ID=
+# CLOUDFLARE_TURN_API_TOKEN=

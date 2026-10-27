@@ -31,12 +31,12 @@ export function splitDuration(ms) {
   };
 }
 
-/** « jueves, 23 de octubre · 19:00 » dans le fuseau du visiteur. */
-export function formatLiveDate(iso) {
+/** « jueves, 23 de octubre · 19:00 » dans le fuseau du visiteur (`locale` : es par défaut). */
+export function formatLiveDate(iso, locale = "es") {
   if (!iso) return "";
   const date = new Date(iso);
-  const day = new Intl.DateTimeFormat("es", { weekday: "long", day: "numeric", month: "long" }).format(date);
-  const time = new Intl.DateTimeFormat("es", { hour: "2-digit", minute: "2-digit" }).format(date);
+  const day = new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(date);
+  const time = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(date);
   // Majuscule uniquement sur la première lettre (« Lunes, 19 de octubre »).
   return `${day.charAt(0).toUpperCase()}${day.slice(1)} · ${time}`;
 }

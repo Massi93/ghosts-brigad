@@ -5,12 +5,18 @@ import { useViewerStream } from "./useViewerStream";
 import { getPublicSocket } from "../lib/socket";
 import { livePhase, useLiveStatus } from "../lib/liveStatus";
 import { formatCountdown, formatDuration, formatLiveDate, splitDuration, useNow } from "../lib/time";
+import { intlLocale, liveTexts, pageLang } from "./i18n";
 
 const HEART_FLUSH_MS = 200;
 const DOUBLE_TAP_MS = 300;
 
+// Langue du site (es, fr, ar), choisie une fois à l'ouverture de la page.
+const LANG = pageLang();
+const LOCALE = intlLocale(LANG);
+const T = liveTexts(LANG);
+
 /** « 1,2 K » pour les grands nombres. */
-const compact = (n) => new Intl.NumberFormat("es", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+const compact = (n) => new Intl.NumberFormat(LOCALE, { notation: "compact", maximumFractionDigits: 1 }).format(n);
 
 /**
  * Page de visionnage du live (/live), plein écran, responsive.
@@ -39,6 +45,8 @@ export default function LivePage() {
 
   useEffect(() => {
     document.title = "🔴 Live · Dani Inmigración";
+    document.documentElement.lang = LANG;
+    document.documentElement.dir = LANG === "ar" ? "rtl" : "ltr";
   }, []);
 
   // Statistiques, cœurs des autres viewers et fin du live.
@@ -182,13 +190,13 @@ export default function LivePage() {
           <a
             href="/"
             onPointerUp={(e) => e.stopPropagation()}
-            aria-label="Volver al sitio"
+            aria-label={T.back}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/40 backdrop-blur active:scale-90"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
           </a>
           <div className="min-w-0">
-            <p className="truncate font-display text-sm font-bold">{live?.title || "Live con Dani"}</p>
+            <p className="truncate font-display text-sm font-bold">{live?.title || T.defaultTitle}</p>
             <p className="text-xs text-white/60">Dani Inmigración</p>
           </div>
         </div>
@@ -210,7 +218,7 @@ export default function LivePage() {
               type="button"
               onPointerUp={(e) => e.stopPropagation()}
               onClick={toggleFullscreen}
-              aria-label="Pantalla completa"
+              aria-label={T.fullscreen}
               className="hidden h-8 w-8 place-items-center rounded-md bg-black/40 backdrop-blur sm:grid"
             >
               <Maximize2 className="h-4 w-4" />
@@ -221,7 +229,7 @@ export default function LivePage() {
 
       {/* Reconnexion / son */}
       {isLive && live?.interrupted && (
-        <Notice icon={WifiOff} text="Dani perdió la conexión. Reconectando…" />
+        <Notice icon={WifiOff} text={T.reconnecting} />
       )}
       {isLive && !live?.interrupted && stream && needsSound && (
         <button
@@ -230,7 +238,7 @@ export default function LivePage() {
           onClick={enableSound}
           className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-ink shadow-lg active:scale-95"
         >
-          <VolumeX className="h-4 w-4" /> Toca para activar el sonido
+          <VolumeX className="h-4 w-4" /> {T.enableSound}
         </button>
       )}
 
@@ -243,7 +251,7 @@ export default function LivePage() {
             type="button"
             onPointerUp={(e) => e.stopPropagation()}
             onClick={sendHeart}
-            aria-label="Enviar me gusta"
+            aria-label={T.sendHeart}
             className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-pink-400 to-red-500 shadow-[0_10px_30px_-6px_rgba(255,45,85,0.8)] transition active:scale-90"
           >
             <Heart className="h-8 w-8 fill-white text-white" />
@@ -254,7 +262,7 @@ export default function LivePage() {
 
       {isLive && stream && (
         <p className="pointer-events-none absolute bottom-0 left-0 z-30 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-xs text-white/60">
-          Toca dos veces para enviar ❤️
+          {T.doubleTap}
         </p>
       )}
     </div>
@@ -279,25 +287,25 @@ function StatusScreen({ loaded, phase, ended, state, live, remaining }) {
     content = (
       <>
         <p className="text-5xl">💙</p>
-        <h1 className="mt-4 font-display text-2xl font-extrabold">El live ha terminado</h1>
-        <p className="mt-2 text-sm text-white/60">¡Gracias por acompañarnos! Te esperamos en el próximo.</p>
-        <a href="/#proximo-live" className="btn-primary mt-6">Avisarme del próximo live</a>
+        <h1 className="mt-4 font-display text-2xl font-extrabold">{T.endedTitle}</h1>
+        <p className="mt-2 text-sm text-white/60">{T.endedText}</p>
+        <a href="/#proximo-live" className="btn-primary mt-6">{T.notifyNext}</a>
       </>
     );
   } else if (state === "full") {
     content = (
       <>
-        <h1 className="font-display text-2xl font-extrabold">El live está lleno</h1>
-        <p className="mt-2 text-sm text-white/60">Se alcanzó el máximo de espectadores. Inténtalo en unos minutos.</p>
+        <h1 className="font-display text-2xl font-extrabold">{T.fullTitle}</h1>
+        <p className="mt-2 text-sm text-white/60">{T.fullText}</p>
       </>
     );
   } else if (phase === "none") {
     content = (
       <>
         <Radio className="h-10 w-10 text-white/40" />
-        <h1 className="mt-4 font-display text-2xl font-extrabold">No hay ningún live ahora</h1>
-        <p className="mt-2 text-sm text-white/60">Inscríbete y te avisaremos del próximo directo.</p>
-        <a href="/#proximo-live" className="btn-primary mt-6">Inscribirme</a>
+        <h1 className="mt-4 font-display text-2xl font-extrabold">{T.noneTitle}</h1>
+        <p className="mt-2 text-sm text-white/60">{T.noneText}</p>
+        <a href="/#proximo-live" className="btn-primary mt-6">{T.register}</a>
       </>
     );
   } else if (phase === "live") {
@@ -305,7 +313,7 @@ function StatusScreen({ loaded, phase, ended, state, live, remaining }) {
       <>
         <Loader2 className="h-8 w-8 animate-spin text-white/70" />
         <p className="mt-4 text-sm text-white/70">
-          {live?.interrupted ? "Esperando a Dani…" : "Conectando con el directo…"}
+          {live?.interrupted ? T.waitingDani : T.connecting}
         </p>
       </>
     );
@@ -315,18 +323,18 @@ function StatusScreen({ loaded, phase, ended, state, live, remaining }) {
     content = (
       <>
         <span className="flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1 text-xs font-bold text-red-300">
-          <span className="live-blink">●</span> Próximamente
+          <span className="live-blink">●</span> {T.soon}
         </span>
         <h1 className="mt-4 font-display text-2xl font-extrabold">{live.title}</h1>
-        <p className="mt-1 text-sm text-white/60">{formatLiveDate(live.scheduledAt)}</p>
+        <p className="mt-1 text-sm text-white/60">{formatLiveDate(live.scheduledAt, LOCALE)}</p>
         {phase === "ready" ? (
-          <p className="mt-6 text-sm text-white/80">Dani se conectará en un momento…</p>
+          <p className="mt-6 text-sm text-white/80">{T.daniSoon}</p>
         ) : (
           <p className="mt-6 font-mono text-5xl font-bold tabular-nums">
             {days || hours ? `${days ? `${days}d ` : ""}${hours}h ${String(Math.floor((remaining % 3600_000) / 60_000)).padStart(2, "0")}m` : formatCountdown(remaining)}
           </p>
         )}
-        <p className="mt-3 text-xs text-white/40">Esta página se actualizará sola cuando empiece.</p>
+        <p className="mt-3 text-xs text-white/40">{T.autoRefresh}</p>
       </>
     );
   }

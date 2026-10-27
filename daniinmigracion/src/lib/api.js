@@ -1,7 +1,9 @@
 /**
- * Petit client HTTP pour l'API du serveur (/api/...).
+ * Petit client HTTP pour l'API du Live (/api/live/...).
  * Les cookies de session sont envoyés automatiquement (même origine).
  */
+
+const API_BASE = "/api/live";
 
 export class ApiError extends Error {
   constructor(status, message, code) {
@@ -20,12 +22,12 @@ export function setUnauthorizedHandler(handler) {
 
 /** URL d'un fichier servi par l'API (ex. une vidéo enregistrée). */
 export function apiFileUrl(path) {
-  return `/api${path}`;
+  return `${API_BASE}${path}`;
 }
 
 /**
  * Appelle l'API et retourne le JSON. Lève `ApiError` si le statut n'est pas 2xx.
- * @param {string} path  chemin après /api (ex. "/admin/lives")
+ * @param {string} path  chemin après /api/live (ex. "/admin/lives")
  * @param {{ method?: string, body?: any, signal?: AbortSignal }} [options]
  */
 export async function api(path, { method = "GET", body, signal } = {}) {
@@ -43,7 +45,7 @@ export async function api(path, { method = "GET", body, signal } = {}) {
     init.headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(`/api${path}`, init);
+  const response = await fetch(`${API_BASE}${path}`, init);
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const data = isJson ? await response.json().catch(() => ({})) : {};
 
