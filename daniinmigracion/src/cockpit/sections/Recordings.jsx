@@ -44,7 +44,7 @@ export default function Recordings() {
     <div>
       <SectionTitle
         title="Grabaciones"
-        subtitle="Cada live se graba automáticamente. Los archivos se guardan en storage/recordings/."
+        subtitle="Cada live se graba automáticamente y se guarda en Cloudflare (R2). Puedes verlo o descargarlo aquí."
       />
 
       {!loading && recordings.length === 0 ? (
@@ -75,21 +75,21 @@ export default function Recordings() {
                     type="button"
                     disabled={r.status !== "ready"}
                     onClick={() => setPlaying(r.id)}
-                    className="group grid aspect-video place-items-center rounded-2xl bg-gradient-to-br from-brand-700/60 to-ink disabled:cursor-not-allowed"
+                    className="group grid aspect-video place-items-center rounded-2xl bg-gradient-to-br from-[#1a1b2e] to-site-red-d disabled:cursor-not-allowed"
                   >
-                    <PlayCircle className="h-14 w-14 text-white/70 transition group-hover:scale-110 group-hover:text-white" />
+                    <PlayCircle className="h-14 w-14 text-white/80 transition group-hover:scale-110 group-hover:text-white" />
                   </button>
                 )}
 
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{r.liveTitle ?? "Live"}</p>
-                    <p className="text-xs text-white/40">{formatDateTime(r.createdAt)}</p>
+                    <p className="text-xs text-site-gray">{formatDateTime(r.createdAt)}</p>
                   </div>
                   <Badge tone={status.tone}>{status.label}</Badge>
                 </div>
 
-                <p className="text-xs text-white/50">
+                <p className="text-xs text-site-gray">
                   ⏱ {r.durationMs ? formatDuration(r.durationMs) : "—"} · 💾 {formatBytes(r.sizeBytes)} ·{" "}
                   <span className="break-all">{r.filename}</span>
                 </p>
@@ -97,7 +97,7 @@ export default function Recordings() {
                 <div className="flex gap-2">
                   <a
                     href={apiFileUrl(`/admin/recordings/${r.id}/file?download=1`)}
-                    className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-semibold hover:bg-brand-400 ${
+                    className={`inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-br from-site-red to-site-red-d text-white shadow-site-red transition hover:-translate-y-px px-4 py-2.5 text-sm font-bold ${
                       r.status === "ready" ? "" : "pointer-events-none opacity-50"
                     }`}
                   >

@@ -7,7 +7,7 @@ import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 export function Card({ className = "", children, ...props }) {
   return (
-    <div className={`rounded-3xl border border-white/10 bg-white/[0.04] p-5 ${className}`} {...props}>
+    <div className={`rounded-[22px] border border-site-line bg-white p-5 shadow-site-card ${className}`} {...props}>
       {children}
     </div>
   );
@@ -17,8 +17,10 @@ export function SectionTitle({ title, subtitle, actions }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="font-display text-2xl font-extrabold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-white/50">{subtitle}</p>}
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-site-red">Cockpit · Live</p>
+        <h1 className="mt-1 font-display text-2xl font-black tracking-tight text-site-ink sm:text-3xl">{title}</h1>
+        <div className="site-line-accent mt-2 h-[3px] w-12 rounded-full" />
+        {subtitle && <p className="mt-2 text-sm text-site-text">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -26,10 +28,11 @@ export function SectionTitle({ title, subtitle, actions }) {
 }
 
 const VARIANTS = {
-  primary: "bg-brand-500 text-white hover:bg-brand-400",
-  danger: "bg-red-500 text-white hover:bg-red-400",
-  ghost: "border border-white/15 bg-white/5 text-white hover:bg-white/10",
-  subtle: "text-white/70 hover:bg-white/5 hover:text-white",
+  // Boutons « pilule » comme sur le site (rouge du drapeau, ombre rouge).
+  primary: "bg-gradient-to-br from-site-red to-site-red-d text-white shadow-site-red hover:-translate-y-px hover:shadow-[0_10px_24px_-4px_rgba(198,11,30,0.42)]",
+  danger: "bg-gradient-to-br from-site-red to-site-red-d text-white shadow-site-red hover:-translate-y-px hover:shadow-[0_10px_24px_-4px_rgba(198,11,30,0.42)]",
+  ghost: "border border-site-line bg-white text-site-ink hover:border-site-teal hover:text-site-teal-d",
+  subtle: "text-site-text hover:bg-site-bg hover:text-site-ink",
 };
 
 export function Button({
@@ -46,7 +49,7 @@ export function Button({
       type="button"
       {...props}
       disabled={loading || disabled}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 ${VARIANTS[variant]} ${className}`}
     >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : Icon && <Icon className="h-4 w-4" />}
       {children}
@@ -56,12 +59,12 @@ export function Button({
 
 export function Badge({ tone = "neutral", children, className = "", ...props }) {
   const tones = {
-    neutral: "bg-white/10 text-white/70",
-    live: "bg-red-500 text-white",
-    success: "bg-emerald-400/15 text-emerald-300",
-    warning: "bg-amber-400/15 text-amber-300",
-    danger: "bg-red-500/15 text-red-300",
-    info: "bg-brand-400/15 text-brand-200",
+    neutral: "bg-site-bg text-site-text ring-1 ring-inset ring-site-line",
+    live: "bg-site-red text-white",
+    success: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
+    warning: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
+    danger: "bg-site-red-l text-site-red-d ring-1 ring-inset ring-red-200",
+    info: "bg-[#e6f7f7] text-site-teal-d ring-1 ring-inset ring-[#b3e8e8]",
     overlay: "bg-black/70 text-white", // sur la vidéo
   };
   return (
@@ -87,38 +90,38 @@ export function MailModeBadge({ mail }) {
   );
 }
 
-export function Stat({ icon: Icon, label, value, hint, tone = "text-brand-200" }) {
+export function Stat({ icon: Icon, label, value, hint, tone = "text-site-red" }) {
   return (
     <Card className="flex flex-col gap-2 p-4">
-      <div className="flex items-center gap-2 text-xs font-medium text-white/50">
+      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-site-gray">
         {Icon && <Icon className={`h-4 w-4 ${tone}`} />}
         {label}
       </div>
-      <p className="font-display text-2xl font-extrabold tabular-nums">{value}</p>
-      {hint && <p className="text-xs text-white/40">{hint}</p>}
+      <p className="font-display text-2xl font-black tabular-nums text-site-ink">{value}</p>
+      {hint && <p className="text-xs text-site-gray">{hint}</p>}
     </Card>
   );
 }
 
 export function Field({ label, hint, children }) {
   return (
-    <label className="flex flex-col gap-1.5 text-xs font-medium text-white/60">
+    <label className="flex flex-col gap-1.5 text-[11px] font-bold uppercase tracking-wider text-site-ink">
       {label}
       {children}
-      {hint && <span className="text-[11px] font-normal text-white/40">{hint}</span>}
+      {hint && <span className="text-[11px] font-normal normal-case tracking-normal text-site-gray">{hint}</span>}
     </label>
   );
 }
 
 export const inputClass =
-  "w-full rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none transition focus:border-brand-400 focus:bg-white/10 disabled:opacity-50 [color-scheme:dark]";
+  "w-full rounded-[11px] border-[1.5px] border-site-line bg-site-soft px-3.5 py-2.5 text-sm font-normal normal-case tracking-normal text-site-ink placeholder-site-gray/70 outline-none transition focus:border-site-teal focus:bg-white focus:ring-4 focus:ring-[rgba(0,180,180,0.1)] disabled:opacity-50";
 
 export function EmptyState({ icon: Icon, title, text }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-4 py-10 text-center">
-      {Icon && <Icon className="h-8 w-8 text-white/25" />}
-      <p className="font-semibold text-white/70">{title}</p>
-      {text && <p className="max-w-sm text-sm text-white/40">{text}</p>}
+      {Icon && <Icon className="h-8 w-8 text-site-gray/60" />}
+      <p className="font-semibold text-site-ink">{title}</p>
+      {text && <p className="max-w-sm text-sm text-site-gray">{text}</p>}
     </div>
   );
 }
@@ -143,7 +146,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4">
+      <div className="cockpit-theme pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-2 px-4">
         <AnimatePresence>
           {toasts.map((t) => (
             <motion.div
@@ -152,12 +155,12 @@ export function ToastProvider({ children }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 8 }}
               role="status"
-              className="pointer-events-auto flex max-w-md items-center gap-2 rounded-2xl border border-white/10 bg-[#121b33] px-4 py-3 text-sm shadow-card"
+              className="pointer-events-auto flex max-w-md items-center gap-2 rounded-2xl border border-site-line bg-white px-4 py-3 text-sm font-medium text-site-ink shadow-[0_18px_50px_-12px_rgba(15,16,32,0.3)]"
             >
               {t.type === "error" ? (
-                <XCircle className="h-4 w-4 shrink-0 text-red-400" />
+                <XCircle className="h-4 w-4 shrink-0 text-site-red" />
               ) : (
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
               )}
               {t.message}
             </motion.div>

@@ -77,15 +77,15 @@ export default function SiteSettings() {
               <button
                 type="button"
                 onClick={() => setSettings({ ...settings, liveSectionEnabled: !settings.liveSectionEnabled })}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-sm"
+                className="flex items-center justify-between rounded-2xl border border-site-line bg-site-bg px-4 py-3 text-left text-sm"
                 aria-pressed={settings.liveSectionEnabled}
               >
                 <span className="flex items-center gap-2">
-                  {settings.liveSectionEnabled ? <Eye className="h-4 w-4 text-emerald-300" /> : <EyeOff className="h-4 w-4 text-white/40" />}
+                  {settings.liveSectionEnabled ? <Eye className="h-4 w-4 text-emerald-600" /> : <EyeOff className="h-4 w-4 text-site-gray" />}
                   {settings.liveSectionEnabled ? "Visible en el sitio" : "Oculta en el sitio"}
                 </span>
                 <span
-                  className={`relative h-6 w-11 rounded-full transition ${settings.liveSectionEnabled ? "bg-emerald-500" : "bg-white/20"}`}
+                  className={`relative h-6 w-11 rounded-full transition ${settings.liveSectionEnabled ? "bg-emerald-500" : "bg-site-line"}`}
                 >
                   <span
                     className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
@@ -111,7 +111,7 @@ export default function SiteSettings() {
                   onChange={(e) => setSettings({ ...settings, liveSectionText: e.target.value })}
                 />
               </Field>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-site-gray">
                 El botón LIVE rojo aparece automáticamente en la cabecera del sitio cuando hay un live programado.
               </p>
               <Button type="submit" icon={Save} loading={saving}>
@@ -125,10 +125,10 @@ export default function SiteSettings() {
           <Card>
             <form onSubmit={sendTest} className="flex flex-col gap-4">
               <p className="flex items-center gap-2 font-display text-lg font-bold">
-                <Mail className="h-5 w-5 text-brand-300" /> Correo de prueba
+                <Mail className="h-5 w-5 text-site-red" /> Correo de prueba
               </p>
               {mail && (
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-site-text">
                   Modo actual:{" "}
                   <MailModeBadge mail={mail} />
                 </p>
@@ -146,7 +146,7 @@ export default function SiteSettings() {
               <Button type="submit" icon={Send} loading={testing} variant="ghost">
                 Enviar prueba
               </Button>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-site-gray">
                 El envío real se configura en Cloudflare (variables MAIL_MODE, SMTP… ver README, sección « Live »).
               </p>
             </form>
@@ -154,25 +154,25 @@ export default function SiteSettings() {
 
           <Card className="flex flex-col gap-3 text-sm">
             <p className="flex items-center gap-2 font-display text-lg font-bold">
-              <KeyRound className="h-5 w-5 text-brand-300" /> Seguridad
+              <KeyRound className="h-5 w-5 text-site-red" /> Seguridad
             </p>
             {defaultPassword && (
-              <p className="flex items-start gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-red-200">
+              <p className="flex items-start gap-2 rounded-xl bg-site-red-l px-3 py-2 text-site-red-d">
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
                 Usas la contraseña de demostración. Cámbiala antes de anunciar el live.
               </p>
             )}
-            <p className="text-white/60">
+            <p className="text-site-text">
               Para cambiar la contraseña del cockpit, ejecuta en el proyecto (se guarda cifrada en Cloudflare):
             </p>
-            <code className="rounded-xl bg-black/40 px-3 py-2 text-xs text-brand-100">
+            <code className="rounded-xl border border-site-line bg-site-bg px-3 py-2 font-mono text-xs text-site-ink">
               npm run cockpit:password -- "nueva-contraseña"
             </code>
             <div className="flex flex-wrap gap-2 pt-1">
-              <a href="/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold">
+              <a href="/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-site-line bg-site-bg px-3 py-2 text-xs font-semibold">
                 <ExternalLink className="h-3.5 w-3.5" /> Ver el sitio
               </a>
-              <a href="/live" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold">
+              <a href="/live" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-site-line bg-site-bg px-3 py-2 text-xs font-semibold">
                 <ExternalLink className="h-3.5 w-3.5" /> Página del live
               </a>
             </div>
@@ -181,21 +181,21 @@ export default function SiteSettings() {
           {mail?.mode === "console" && (
             <Card className="flex flex-col gap-3 text-sm">
               <p className="flex items-center gap-2 font-display text-lg font-bold">
-                <Inbox className="h-5 w-5 text-brand-300" /> Correos de prueba
+                <Inbox className="h-5 w-5 text-site-red" /> Correos de prueba
               </p>
-              <p className="text-white/60">
+              <p className="text-site-text">
                 Modo consola: estos son los últimos correos que se habrían enviado (confirmaciones, recordatorios,
                 envíos manuales). Nadie los recibe.
               </p>
               {outbox.length === 0 ? (
-                <p className="text-white/40">Todavía no hay ninguno.</p>
+                <p className="text-site-gray">Todavía no hay ninguno.</p>
               ) : (
-                <ul className="flex max-h-72 flex-col divide-y divide-white/5 overflow-y-auto">
+                <ul className="flex max-h-72 flex-col divide-y divide-site-line overflow-y-auto">
                   {outbox.map((m) => (
                     <li key={m.id} className="flex items-center justify-between gap-3 py-2">
                       <span className="min-w-0">
                         <span className="block truncate font-semibold">{m.subject}</span>
-                        <span className="block truncate text-xs text-white/50">
+                        <span className="block truncate text-xs text-site-gray">
                           {m.toEmail} · {formatDateTime(m.createdAt)}
                         </span>
                       </span>
@@ -203,7 +203,7 @@ export default function SiteSettings() {
                         href={apiFileUrl(`/admin/mail/outbox/${m.id}`)}
                         target="_blank"
                         rel="noreferrer"
-                        className="shrink-0 rounded-lg border border-white/15 px-2.5 py-1 text-xs font-semibold"
+                        className="shrink-0 rounded-lg border border-site-line px-2.5 py-1 text-xs font-semibold"
                       >
                         Ver
                       </a>

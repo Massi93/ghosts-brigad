@@ -8,6 +8,22 @@ export default {
         display: ["Sora", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
+        // Couleurs du site www.daniinmigracion.com (cockpit)
+        site: {
+          red: "#c60b1e",
+          "red-d": "#9e0917",
+          "red-l": "#fff1f2",
+          gold: "#f1bf00",
+          "gold-d": "#b89200",
+          teal: "#00b4b4",
+          "teal-d": "#008080",
+          ink: "#0f1020",
+          text: "#52525b",
+          gray: "#8a8a99",
+          line: "#e9ecf2",
+          bg: "#f6f8fb",
+          soft: "#fbfcfe",
+        },
         ink: "#0b1220",
         brand: {
           50: "#eef4ff",
@@ -28,6 +44,8 @@ export default {
         },
       },
       boxShadow: {
+        "site-card": "0 18px 50px -24px rgba(15,16,32,0.18)",
+        "site-red": "0 5px 16px -2px rgba(198,11,30,0.30)",
         glow: "0 20px 60px -20px rgba(51,88,244,0.55)",
         card: "0 10px 40px -12px rgba(12,18,32,0.35)",
         soft: "0 8px 30px -10px rgba(12,18,32,0.18)",

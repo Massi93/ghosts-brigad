@@ -19,7 +19,7 @@ function defaultMessage(next) {
 
 /** Statut d'envoi affiché pour un inscrit. */
 function EmailStatus({ status, kind, error }) {
-  if (!status) return <span className="text-xs text-white/30">—</span>;
+  if (!status) return <span className="text-xs text-site-gray/70">—</span>;
   const label = KIND_LABELS[kind] ?? "Email";
   if (status === "sent") {
     return (
@@ -193,7 +193,7 @@ export default function Registrants() {
         actions={
           <a
             href={apiFileUrl("/admin/registrations.csv")}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold hover:bg-white/10"
+            className="inline-flex items-center gap-2 rounded-xl border border-site-line bg-site-bg px-4 py-2.5 text-sm font-semibold hover:bg-[#eef1f6]"
           >
             <Download className="h-4 w-4" /> Exportar CSV
           </a>
@@ -203,20 +203,20 @@ export default function Registrants() {
       <div className="grid gap-5 xl:grid-cols-3">
         {/* Liste */}
         <Card className="p-0 xl:col-span-2">
-          <div className="flex flex-wrap items-center gap-3 border-b border-white/10 px-5 py-4">
+          <div className="flex flex-wrap items-center gap-3 border-b border-site-line px-5 py-4">
             <label className="flex items-center gap-2 text-sm font-medium">
               <input
                 type="checkbox"
                 checked={allSelected}
                 onChange={toggleAll}
                 disabled={!selectable.length}
-                className="h-4 w-4 accent-brand-500"
+                className="h-4 w-4 accent-site-red"
               />
               Seleccionar todo
             </label>
             <Badge tone="info">{selected.size} seleccionados</Badge>
             <div className="relative ml-auto w-full sm:w-64">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-site-gray/70" />
               <input
                 className={`${inputClass} py-2 pl-9`}
                 placeholder="Buscar nombre o email"
@@ -237,7 +237,7 @@ export default function Registrants() {
               {/* Tableau (écrans larges) */}
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-left text-sm">
-                  <thead className="text-xs uppercase tracking-wider text-white/40">
+                  <thead className="text-xs uppercase tracking-wider text-site-gray">
                     <tr>
                       <th className="w-10 px-5 py-3" />
                       <th className="px-3 py-3 font-medium">Nombre</th>
@@ -248,7 +248,7 @@ export default function Registrants() {
                       <th className="w-10 px-3 py-3" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-y divide-site-line">
                     {filtered.map((r) => (
                       <tr key={r.id} className={r.unsubscribedAt ? "opacity-50" : ""}>
                         <td className="px-5 py-3">
@@ -258,16 +258,16 @@ export default function Registrants() {
                             onChange={() => toggle(r.id)}
                             disabled={Boolean(r.unsubscribedAt)}
                             aria-label={`Seleccionar ${r.email}`}
-                            className="h-4 w-4 accent-brand-500"
+                            className="h-4 w-4 accent-site-red"
                           />
                         </td>
                         <td className="px-3 py-3 font-medium">{r.firstName}</td>
                         <td className="px-3 py-3">{r.lastName}</td>
-                        <td className="px-3 py-3 text-white/70">
+                        <td className="px-3 py-3 text-site-text">
                           {r.email}
                           {r.unsubscribedAt && <Badge className="ml-2">Baja</Badge>}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-white/50">{formatDateTime(r.createdAt)}</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-site-gray">{formatDateTime(r.createdAt)}</td>
                         <td className="px-3 py-3">
                           <EmailStatus {...(r.lastEmail ?? {})} />
                         </td>
@@ -276,7 +276,7 @@ export default function Registrants() {
                             type="button"
                             onClick={() => remove(r)}
                             aria-label="Eliminar"
-                            className="rounded-lg p-1.5 text-white/40 hover:bg-white/5 hover:text-red-300"
+                            className="rounded-lg p-1.5 text-site-gray hover:bg-site-bg hover:text-site-red"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -288,7 +288,7 @@ export default function Registrants() {
               </div>
 
               {/* Cartes (mobile) */}
-              <ul className="divide-y divide-white/5 md:hidden">
+              <ul className="divide-y divide-site-line md:hidden">
                 {filtered.map((r) => (
                   <li key={r.id} className={`flex items-start gap-3 px-5 py-3 ${r.unsubscribedAt ? "opacity-50" : ""}`}>
                     <input
@@ -297,14 +297,14 @@ export default function Registrants() {
                       onChange={() => toggle(r.id)}
                       disabled={Boolean(r.unsubscribedAt)}
                       aria-label={`Seleccionar ${r.email}`}
-                      className="mt-1 h-4 w-4 accent-brand-500"
+                      className="mt-1 h-4 w-4 accent-site-red"
                     />
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold">
                         {r.firstName} {r.lastName}
                       </p>
-                      <p className="truncate text-sm text-white/60">{r.email}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/40">
+                      <p className="truncate text-sm text-site-text">{r.email}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-site-gray">
                         {formatDateTime(r.createdAt)}
                         <EmailStatus {...(r.lastEmail ?? {})} />
                         {r.unsubscribedAt && <Badge>Baja</Badge>}
@@ -314,7 +314,7 @@ export default function Registrants() {
                       type="button"
                       onClick={() => remove(r)}
                       aria-label="Eliminar"
-                      className="rounded-lg p-1.5 text-white/40 hover:text-red-300"
+                      className="rounded-lg p-1.5 text-site-gray hover:text-site-red"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -328,7 +328,7 @@ export default function Registrants() {
         {/* Envoi manuel */}
         <Card className="flex h-fit flex-col gap-4">
           <p className="flex items-center gap-2 font-display text-lg font-bold">
-            <Mail className="h-5 w-5 text-brand-300" /> Notificar por email
+            <Mail className="h-5 w-5 text-site-red" /> Notificar por email
           </p>
           <Field label="Asunto">
             <input className={inputClass} maxLength={150} value={subject} onChange={(e) => setSubject(e.target.value)} />
@@ -346,21 +346,21 @@ export default function Registrants() {
           </Button>
 
           {batch && (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm">
+            <div className="rounded-2xl border border-site-line bg-site-bg p-4 text-sm">
               <div className="flex items-center justify-between">
                 <span className="font-semibold">{batch.done ? "Envío terminado" : "Enviando…"}</span>
-                <span className="tabular-nums text-white/60">
+                <span className="tabular-nums text-site-text">
                   {batch.sent + batch.failed}/{batch.total}
                 </span>
               </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-site-bg">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-brand-400 to-emerald-400 transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-site-red to-site-gold transition-all"
                   style={{ width: `${batch.total ? ((batch.sent + batch.failed) / batch.total) * 100 : 100}%` }}
                 />
               </div>
-              <p className="mt-2 text-xs text-white/50">
-                ✅ {batch.sent} enviados {batch.failed > 0 && <span className="text-red-300">· ❌ {batch.failed} con error</span>}
+              <p className="mt-2 text-xs text-site-gray">
+                ✅ {batch.sent} enviados {batch.failed > 0 && <span className="text-site-red-d">· ❌ {batch.failed} con error</span>}
               </p>
             </div>
           )}

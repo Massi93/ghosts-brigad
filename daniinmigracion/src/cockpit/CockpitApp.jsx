@@ -3,7 +3,6 @@ import {
   CalendarClock,
   ExternalLink,
   Film,
-  Globe2,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -17,6 +16,7 @@ import { formatDuration, useNow } from "../lib/time";
 import LoginPage from "./LoginPage";
 import { CockpitProvider, useCockpit } from "./CockpitContext";
 import { ToastProvider } from "./ui";
+import logoUrl from "../assets/logo-dani.jpg?inline";
 import Overview from "./sections/Overview";
 import LiveStudio from "./sections/LiveStudio";
 import Schedule from "./sections/Schedule";
@@ -59,8 +59,8 @@ function AuthGate() {
 
   if (!admin) {
     return (
-      <div className="grid min-h-screen place-items-center bg-ink">
-        <Loader2 className="h-8 w-8 animate-spin text-white/60" />
+      <div className="cockpit-theme grid min-h-screen place-items-center bg-site-bg">
+        <Loader2 className="h-8 w-8 animate-spin text-site-red" />
       </div>
     );
   }
@@ -103,43 +103,47 @@ function Dashboard({ admin }) {
   }, [section]);
 
   return (
-    <div className="min-h-[100dvh] bg-[#0a101d] text-white lg:flex">
+    <div className="cockpit-theme min-h-[100dvh] bg-site-bg text-site-ink lg:flex">
       {/* Barre latérale (ordinateur) */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-ink/80 p-5 lg:flex">
-        <Brand />
-        <nav className="mt-8 flex flex-col gap-1">
-          {SECTIONS.map((s) => (
-            <NavLink key={s.id} item={s} active={s.id === section} />
-          ))}
-        </nav>
-        <div className="mt-auto flex flex-col gap-1 border-t border-white/10 pt-4">
-          <ExternalNav href="/" label="Ver el sitio" />
-          <ExternalNav href="/live" label="Página del live" />
-          <button
-            type="button"
-            onClick={logout}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition hover:bg-white/5 hover:text-white"
-          >
-            <LogOut className="h-4 w-4" /> Cerrar sesión ({admin.username})
-          </button>
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-site-line bg-white lg:flex">
+        <div className="site-stripe" />
+        <div className="flex min-h-0 flex-1 flex-col p-5">
+          <Brand />
+          <nav className="mt-8 flex flex-col gap-1">
+            {SECTIONS.map((s) => (
+              <NavLink key={s.id} item={s} active={s.id === section} />
+            ))}
+          </nav>
+          <div className="mt-auto flex flex-col gap-1 border-t border-site-line pt-4">
+            <ExternalNav href="/" label="Ver el sitio" />
+            <ExternalNav href="/live" label="Página del live" />
+            <button
+              type="button"
+              onClick={logout}
+              className="flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-site-text transition hover:bg-site-red-l hover:text-site-red"
+            >
+              <LogOut className="h-4 w-4" /> Cerrar sesión ({admin.username})
+            </button>
+          </div>
         </div>
       </aside>
 
       <div className="min-w-0 flex-1">
         {/* En-tête (mobile + état du live toujours visible) */}
-        <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0a101d]/90 backdrop-blur-xl">
+        <header className="sticky top-0 z-40 border-b border-site-line bg-white/95 backdrop-blur-xl">
+          <div className="site-stripe lg:hidden" />
           <div className="flex h-16 items-center justify-between gap-3 px-4 lg:px-8">
             <div className="lg:hidden">
               <Brand compact />
             </div>
-            <p className="hidden font-display text-lg font-bold lg:block">{current.label}</p>
+            <p className="hidden text-xs font-bold uppercase tracking-[0.18em] text-site-ink lg:block">{current.label}</p>
             <div className="flex items-center gap-2">
               <LivePill />
               <button
                 type="button"
                 onClick={logout}
                 aria-label="Cerrar sesión"
-                className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/5 lg:hidden"
+                className="grid h-9 w-9 place-items-center rounded-full border border-site-line bg-white text-site-text lg:hidden"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -153,8 +157,10 @@ function Dashboard({ admin }) {
                 <a
                   key={s.id}
                   href={`#${s.id}`}
-                  className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                    s.id === section ? "bg-brand-500 text-white" : "text-white/60 hover:bg-white/5"
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold transition ${
+                    s.id === section
+                      ? "bg-site-red text-white shadow-site-red"
+                      : "border border-site-line bg-white text-site-text hover:text-site-ink"
                   }`}
                 >
                   <Icon className="h-4 w-4" /> {s.label}
@@ -174,15 +180,17 @@ function Dashboard({ admin }) {
 
 function Brand({ compact = false }) {
   return (
-    <a href="#resumen" className="flex items-center gap-2">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-glow">
-        <Globe2 className="h-5 w-5 text-white" />
-      </span>
+    <a href="#resumen" className="flex items-center gap-3">
+      <img
+        src={logoUrl}
+        alt="Dani Inmigración"
+        className={`${compact ? "h-10 w-10" : "h-12 w-12"} shrink-0 rounded-full bg-white shadow-[0_3px_14px_rgba(0,0,0,0.12)]`}
+      />
       <span className="leading-tight">
-        <span className="block font-display text-sm font-extrabold">
-          Dani<span className="text-brand-300">Inmigración</span>
+        <span className="block text-[15px] font-extrabold tracking-tight text-site-ink">Dani Inmigración</span>
+        <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-site-gray">
+          {compact ? "Cockpit" : "Cockpit · Lives"}
         </span>
-        {!compact && <span className="block text-xs text-white/50">Cockpit de lives</span>}
       </span>
     </a>
   );
@@ -193,8 +201,10 @@ function NavLink({ item, active }) {
   return (
     <a
       href={`#${item.id}`}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-        active ? "bg-brand-500 text-white shadow-glow" : "text-white/60 hover:bg-white/5 hover:text-white"
+      className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+        active
+          ? "bg-gradient-to-br from-site-red to-site-red-d text-white shadow-site-red"
+          : "text-site-text hover:bg-site-bg hover:text-site-ink"
       }`}
     >
       <Icon className="h-4 w-4" /> {item.label}
@@ -208,7 +218,7 @@ function ExternalNav({ href, label }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition hover:bg-white/5 hover:text-white"
+      className="flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-site-text transition hover:bg-site-bg hover:text-site-teal-d"
     >
       <ExternalLink className="h-4 w-4" /> {label}
     </a>
@@ -222,18 +232,22 @@ function LivePill() {
 
   if (!connected) {
     return (
-      <span className="flex items-center gap-1.5 rounded-xl bg-amber-400/15 px-3 py-1.5 text-xs font-semibold text-amber-300">
+      <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
         <Loader2 className="h-3.5 w-3.5 animate-spin" /> Conectando…
       </span>
     );
   }
   if (!live) {
-    return <span className="rounded-xl bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/50">Sin directo</span>;
+    return (
+      <span className="rounded-full border border-site-line bg-white px-3 py-1.5 text-xs font-semibold text-site-gray">
+        Sin directo
+      </span>
+    );
   }
   return (
     <a
       href="#directo"
-      className="flex items-center gap-2 whitespace-nowrap rounded-xl bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow-[0_0_20px_-4px_rgba(255,45,85,0.8)]"
+      className="flex items-center gap-2 whitespace-nowrap rounded-full bg-site-red px-3.5 py-1.5 text-xs font-bold text-white shadow-site-red"
     >
       <span className="live-blink">
         ● <span className="sm:hidden">LIVE</span>

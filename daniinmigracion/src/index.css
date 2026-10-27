@@ -46,6 +46,33 @@ body {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Cockpit : thème clair aux couleurs du site www.daniinmigracion.com  */
+/* ------------------------------------------------------------------ */
+.cockpit-theme {
+  color-scheme: light;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+.cockpit-theme .font-display,
+.cockpit-theme .font-sans {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+.cockpit-theme .font-display {
+  letter-spacing: -0.02em;
+}
+body:has(.cockpit-theme) {
+  background: #f6f8fb;
+  color: #0f1020;
+}
+/* Bande rouge et or du site (en haut des pages du cockpit) */
+.site-stripe {
+  height: 3px;
+  background: linear-gradient(to right, #c60b1e 25%, #f1bf00 25%, #f1bf00 75%, #c60b1e 75%);
+}
+.site-line-accent {
+  background: linear-gradient(90deg, #c60b1e, #f1bf00);
+}
+
 /* Animated gradient text shimmer */
 .shimmer-text {
   background: linear-gradient(

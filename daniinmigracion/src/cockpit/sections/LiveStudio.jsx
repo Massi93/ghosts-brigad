@@ -145,7 +145,7 @@ export default function LiveStudio() {
       <div className="grid gap-5 lg:grid-cols-3">
         {/* Vidéo */}
         <div className="lg:col-span-2">
-          <div className="relative aspect-video overflow-hidden rounded-3xl border border-white/10 bg-black">
+          <div className="relative aspect-video overflow-hidden rounded-3xl border border-site-line bg-black">
             <video
               ref={videoRef}
               muted
@@ -155,8 +155,8 @@ export default function LiveStudio() {
             />
             {!b.stream && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
-                <Camera className="h-10 w-10 text-white/30" />
-                <p className="text-sm text-white/50">La cámara está apagada</p>
+                <Camera className="h-10 w-10 text-site-gray/70" />
+                <p className="text-sm text-site-gray">La cámara está apagada</p>
                 <Button variant="ghost" icon={Camera} onClick={() => b.startPreview()}>
                   Activar cámara y micrófono
                 </Button>
@@ -178,7 +178,7 @@ export default function LiveStudio() {
               </div>
             )}
             {b.stream && !b.camOn && (
-              <div className="absolute inset-0 grid place-items-center bg-black/80 text-sm text-white/60">
+              <div className="absolute inset-0 grid place-items-center bg-black/80 text-sm text-white/70">
                 Cámara pausada (los espectadores ven una imagen negra)
               </div>
             )}
@@ -238,22 +238,22 @@ export default function LiveStudio() {
           {localLive ? (
             <>
               <div>
-                <p className="text-xs uppercase tracking-wider text-white/50">En directo</p>
+                <p className="text-xs uppercase tracking-wider text-site-gray">En directo</p>
                 <p className="mt-1 font-display text-xl font-bold">{live?.title}</p>
               </div>
               <Button variant="danger" icon={Square} loading={b.status === "stopping"} onClick={stop} className="py-3">
                 {b.status === "stopping" ? "Guardando grabación…" : "Terminar live"}
               </Button>
-              <p className="text-xs text-white/40">
-                La grabación se guarda automáticamente en el servidor cada 2 segundos.
+              <p className="text-xs text-site-gray">
+                La grabación se guarda automáticamente en Cloudflare cada 2 segundos.
               </p>
             </>
           ) : live ? (
-            <p className="text-sm text-white/60">Hay un live abierto: usa los botones de arriba.</p>
+            <p className="text-sm text-site-text">Hay un live abierto: usa los botones de arriba.</p>
           ) : (
             <>
               <p className="font-display text-lg font-bold">Iniciar un live</p>
-              <div className="grid grid-cols-2 gap-1 rounded-xl bg-white/5 p-1 text-xs font-semibold">
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-site-bg p-1 text-xs font-semibold">
                 {[
                   ["scheduled", "Programado"],
                   ["instant", "Inmediato"],
@@ -264,7 +264,7 @@ export default function LiveStudio() {
                     onClick={() => setMode(value)}
                     disabled={value === "scheduled" && !upcoming.length}
                     className={`rounded-lg px-3 py-2 transition disabled:opacity-40 ${
-                      mode === value ? "bg-brand-500 text-white" : "text-white/60"
+                      mode === value ? "bg-site-red text-white" : "text-site-text"
                     }`}
                   >
                     {label}
@@ -297,7 +297,7 @@ export default function LiveStudio() {
               <Button variant="danger" icon={Radio} loading={busy} onClick={start} className="py-3">
                 Iniciar live
               </Button>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-site-gray">
                 Se pedirá acceso a la cámara y al micrófono. El live se graba automáticamente.
               </p>
             </>
@@ -307,7 +307,7 @@ export default function LiveStudio() {
 
       {/* Statistiques en temps réel */}
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Stat icon={Eye} label="Espectadores" value={stats.viewers} tone="text-emerald-300" />
+        <Stat icon={Eye} label="Espectadores" value={stats.viewers} tone="text-emerald-600" />
         <Stat icon={TrendingUp} label="Pico" value={stats.peakViewers} />
         <Stat icon={Heart} label="Me gusta" value={stats.hearts} tone="text-pink-400" />
         <Stat icon={Clock} label="Duración" value={live ? formatDuration(duration) : "—"} />
@@ -316,7 +316,7 @@ export default function LiveStudio() {
 
       {/* Liste des viewers */}
       <Card className="mt-6 p-0">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-site-line px-5 py-4">
           <p className="font-display font-bold">Espectadores conectados</p>
           <Badge tone="info">{viewers.length}</Badge>
         </div>
@@ -327,7 +327,7 @@ export default function LiveStudio() {
             text="Los espectadores aparecen aquí en cuanto abren la página del live (también en la sala de espera)."
           />
         ) : (
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-site-line">
             {sortedViewers.map((v) => {
               // État WebRTC vu par cet onglet, sinon celui fourni par le serveur (s'il en donne un).
               const peer = PEER_LABELS[b.peerStates[v.id] ?? v.peerState];
@@ -338,11 +338,11 @@ export default function LiveStudio() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{v.location}</p>
-                    <p className="text-xs text-white/40">
+                    <p className="text-xs text-site-gray">
                       {v.device} · {v.browser} · IP {v.maskedIp}
                     </p>
                   </div>
-                  <span className="font-mono text-xs tabular-nums text-white/50">
+                  <span className="font-mono text-xs tabular-nums text-site-gray">
                     {formatDuration(now - Date.parse(v.joinedAt))}
                   </span>
                   {peer ? (
@@ -362,14 +362,16 @@ export default function LiveStudio() {
 
 function Banner({ tone, text, actions }) {
   const tones = {
-    danger: "border-red-500/30 bg-red-500/10 text-red-100",
-    warning: "border-amber-400/30 bg-amber-400/10 text-amber-100",
-    info: "border-brand-400/30 bg-brand-400/10 text-brand-100",
+    danger: "border-red-200 bg-site-red-l text-site-red-d",
+    warning: "border-amber-200 bg-amber-50 text-amber-800",
+    info: "border-[#b3e8e8] bg-[#e6f7f7] text-site-teal-d",
   };
   return (
-    <div className={`flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${tones[tone]}`}>
-      <AlertTriangle className="h-4 w-4 shrink-0" />
-      <p className="min-w-0 flex-1">{text}</p>
+    <div className={`flex flex-col gap-3 rounded-2xl border px-4 py-3 text-sm sm:flex-row sm:items-center ${tones[tone]}`}>
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+        <p className="min-w-0 flex-1 font-medium">{text}</p>
+      </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
   );
@@ -377,17 +379,17 @@ function Banner({ tone, text, actions }) {
 
 function RecordingBadge({ recording }) {
   if (recording.status === "error") {
-    return <Badge tone="overlay" className="px-3 py-1 text-xs text-red-300">Grabación con error</Badge>;
+    return <Badge tone="overlay" className="px-3 py-1 text-xs text-site-red-d">Grabación con error</Badge>;
   }
   if (recording.status === "retrying") {
-    return <Badge tone="overlay" className="px-3 py-1 text-xs text-amber-300">REC · reconectando…</Badge>;
+    return <Badge tone="overlay" className="px-3 py-1 text-xs text-amber-700">REC · reconectando…</Badge>;
   }
   if (recording.status === "saving") {
     return <Badge tone="overlay" className="px-3 py-1 text-xs">Guardando…</Badge>;
   }
   return (
     <Badge tone="overlay" className="px-3 py-1 text-xs">
-      <span className="text-red-500">●</span> REC {formatBytes(recording.bytes)}
+      <span className="text-site-red">●</span> REC {formatBytes(recording.bytes)}
     </Badge>
   );
 }

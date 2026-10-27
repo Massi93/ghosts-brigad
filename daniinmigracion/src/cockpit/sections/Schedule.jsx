@@ -116,7 +116,7 @@ export default function Schedule() {
         <Card className="lg:col-span-2">
           <form onSubmit={submit} className="flex flex-col gap-4">
             <p className="flex items-center gap-2 font-display text-lg font-bold">
-              {editingId ? <Pencil className="h-5 w-5 text-brand-300" /> : <CalendarPlus className="h-5 w-5 text-brand-300" />}
+              {editingId ? <Pencil className="h-5 w-5 text-site-red" /> : <CalendarPlus className="h-5 w-5 text-site-red" />}
               {editingId ? "Editar live" : "Programar un live"}
             </p>
             <Field label="Título">
@@ -157,7 +157,7 @@ export default function Schedule() {
                 />
               </Field>
             </div>
-            <p className="text-xs text-white/40">Hora de este ordenador ({timezone}). Cada visitante la ve en su propia zona horaria.</p>
+            <p className="text-xs text-site-gray">Hora de este ordenador ({timezone}). Cada visitante la ve en su propia zona horaria.</p>
             <div className="flex gap-2">
               <Button type="submit" icon={CalendarClock} loading={saving} className="flex-1">
                 {editingId ? "Guardar cambios" : "Programar"}
@@ -173,23 +173,23 @@ export default function Schedule() {
 
         {/* Lives à venir */}
         <Card className="p-0 lg:col-span-3">
-          <p className="border-b border-white/10 px-5 py-4 font-display font-bold">Próximos lives</p>
+          <p className="border-b border-site-line px-5 py-4 font-display font-bold">Próximos lives</p>
           {lists.upcoming.length === 0 ? (
             <EmptyState icon={CalendarClock} title="Ningún live programado" text="Programa uno con el formulario." />
           ) : (
-            <ul className="divide-y divide-white/5">
+            <ul className="divide-y divide-site-line">
               {lists.upcoming.map((l) => (
                 <li key={l.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{l.title}</p>
-                    <p className="text-sm text-white/50">{formatLiveDate(l.scheduledAt)}</p>
+                    <p className="text-sm text-site-gray">{formatLiveDate(l.scheduledAt)}</p>
                   </div>
                   <Badge tone="info">{remainingLabel(Date.parse(l.scheduledAt) - now)}</Badge>
                   <div className="flex gap-1">
                     {!live && (
                       <a
                         href={`#directo?live=${l.id}`}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-red-500 px-3 py-2 text-xs font-semibold"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-br from-site-red to-site-red-d text-white shadow-site-red transition hover:-translate-y-px px-3.5 py-2 text-xs font-bold"
                       >
                         <Play className="h-3.5 w-3.5 fill-white" /> Iniciar
                       </a>
@@ -206,13 +206,13 @@ export default function Schedule() {
 
       {/* Historique */}
       <Card className="mt-6 p-0">
-        <p className="flex items-center gap-2 border-b border-white/10 px-5 py-4 font-display font-bold">
-          <History className="h-4 w-4 text-white/50" /> Historial
+        <p className="flex items-center gap-2 border-b border-site-line px-5 py-4 font-display font-bold">
+          <History className="h-4 w-4 text-site-gray" /> Historial
         </p>
         {lists.past.length === 0 ? (
           <EmptyState title="Todavía no hay lives pasados" />
         ) : (
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-site-line">
             {lists.past.map((l) => {
               const status = STATUS[l.status] ?? STATUS.ended;
               const duration = l.startedAt && l.endedAt ? Date.parse(l.endedAt) - Date.parse(l.startedAt) : null;
@@ -220,10 +220,10 @@ export default function Schedule() {
                 <li key={l.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-sm">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{l.title}</p>
-                    <p className="text-xs text-white/40">{formatDateTime(l.startedAt || l.scheduledAt)}</p>
+                    <p className="text-xs text-site-gray">{formatDateTime(l.startedAt || l.scheduledAt)}</p>
                   </div>
                   {l.status === "ended" && (
-                    <span className="flex items-center gap-3 text-xs text-white/60">
+                    <span className="flex items-center gap-3 text-xs text-site-text">
                       <span>⏱ {formatDuration(duration ?? 0)}</span>
                       <span className="flex items-center gap-1">
                         <TrendingUp className="h-3.5 w-3.5" /> {l.peakViewers}
