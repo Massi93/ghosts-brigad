@@ -205,5 +205,6 @@ if (!bindingInFile) {
       "     nom LIVE, service dani-live (Production)."
   );
 }
-console.log(`  ${bindingInFile ? 1 : 2}. Republier le site depuis son dossier :`);
-console.log(`     cd "${SITE}" && npx wrangler pages deploy . --project-name dani-inmigracion --branch main --commit-dirty=true`);
+console.log(`  ${bindingInFile ? 1 : 2}. Republier le site (seulement ses fichiers web, jamais les dossiers cachés comme .claude/) :`);
+console.log(`     npm run site:deploy -- "${SITE}" --dry-run   # vérifier la liste`);
+console.log(`     npm run site:deploy -- "${SITE}"`);

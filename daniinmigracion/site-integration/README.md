@@ -6,7 +6,7 @@ Le site reste le projet Cloudflare Pages **dani-inmigracion**. Le Worker `dani-l
 ## En une commande
 
 Depuis le dossier `daniinmigracion/` du dépôt, en donnant le dossier du site (celui qu'on publie avec
-`wrangler pages deploy .`) :
+`wrangler pages deploy`) :
 
 ```bash
 npm run site:integrate -- "/chemin/du/dossier/du/site" --dry-run   # montre ce qui sera fait
@@ -35,8 +35,18 @@ Il reste deux gestes, que le script rappelle à la fin :
 - **Lier** le Worker (une seule fois) : Cloudflare → Workers & Pages → **dani-inmigracion** → Settings →
   Bindings → Add → **Service binding** : nom `LIVE`, service `dani-live` (Production).
   (Inutile si le site a un `wrangler.toml` : le script y a ajouté la liaison.)
-- **Republier** le site comme d'habitude :
-  `npx wrangler pages deploy . --project-name dani-inmigracion --branch main --commit-dirty=true`.
+- **Republier** le site, toujours depuis le dossier `daniinmigracion/` :
+
+  ```bash
+  npm run site:deploy -- "/chemin/du/dossier/du/site" --dry-run   # liste ce qui sera publié
+  npm run site:deploy -- "/chemin/du/dossier/du/site"             # publie
+  ```
+
+  ⚠️ Ne plus utiliser `npx wrangler pages deploy .` depuis le dossier du site : cette commande envoie
+  **tout** le dossier, y compris les dossiers cachés (`.claude/`, `.env`…), qui deviennent publics.
+  `site:deploy` copie d'abord uniquement les fichiers web dans un dossier temporaire (sans fichiers
+  cachés sauf `.well-known/`, sans `node_modules`, README, `package.json`, journaux), place
+  `functions/` et la configuration à côté, refuse les fichiers de plus de 25 Mo, puis publie.
 
 ## Ce que voient les visiteurs
 

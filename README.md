@@ -118,10 +118,12 @@ Le script copie les relais `functions/` (ou complète `_worker.js` si le site en
 Puis :
 
 1. Tableau de bord Cloudflare → **Workers & Pages** → projet **dani-inmigracion** → **Settings** → **Bindings** → **Add** → **Service binding** : nom `LIVE`, service `dani-live` (Production).
-2. Republier le site comme d'habitude, depuis son dossier :
+2. Republier le site (uniquement ses fichiers web, jamais les dossiers cachés comme `.claude/` ou `.env`) :
    ```bash
-   npx wrangler pages deploy . --project-name dani-inmigracion --branch main --commit-dirty=true
+   npm run site:deploy -- "/chemin/du/dossier/du/site" --dry-run   # liste ce qui sera publié
+   npm run site:deploy -- "/chemin/du/dossier/du/site"
    ```
+   Ne plus utiliser `wrangler pages deploy .` dans le dossier du site : tout le dossier deviendrait public.
 
 Ensuite, ouvrir https://www.daniinmigracion.com/cockpit (identifiant `dani` + le mot de passe choisi). La rubrique « Próximo live » (inscription) apparaît après le haut de page dès la mise en ligne ; le bouton LIVE n'apparaît que lorsqu'un live est programmé. La rubrique peut être masquée depuis le cockpit (Sitio).
 
