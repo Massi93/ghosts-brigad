@@ -81,35 +81,48 @@ copyFunctions(SOURCE_FUNCTIONS, path.join(SITE, "functions"));
 
 /* 2. Mode avancé : _worker.js -------------------------------------------------- */
 
-function patchWorker(file) {
-  const code = fs.readFileSync(file, "utf8");
-  if (code.includes(MARKER)) return "already";
-  const exports = code.match(/^export\s+default\b/gm) || [];
-  // Seul le cas courant est modifié automatiquement : `export default { … }` ou `export default app;`.
-  if (exports.length !== 1 || /^export\s+default\s+(async\s+)?(class|function)\b/m.test(code)) return "manual";
-  const patched =
-    code.replace(/^export\s+default\b/m, "const __daniSite =") +
-    `
-
-// ── ${MARKER} ──
+/** Relais ajouté à la fin de `_worker.js` (remplacé tel quel si une ancienne version est déjà là). */
+const WORKER_RELAY = `// ── ${MARKER} ──
 // /live, /cockpit et /api/live sont servis par le Worker « dani-live » (liaison de service LIVE).
+// Si ce Worker manque ou ne répond pas, un message clair (503) remplace l'erreur Cloudflare 1101.
 const __DANI_LIVE_PATHS = /^\\/(?:live|cockpit)(?:\\/|$)|^\\/api\\/live(?:\\/|$)/;
+function __daniLiveDown(reason) {
+  return new Response(\`Live no disponible: \${reason}.\`, {
+    status: 503,
+    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+  });
+}
 export default {
   ...__daniSite,
   async fetch(request, env, ctx) {
     if (__DANI_LIVE_PATHS.test(new URL(request.url).pathname)) {
-      if (!env.LIVE) {
-        return new Response("Live no configurado: falta la vinculación de servicio LIVE (Pages → Settings → Bindings).", {
-          status: 503,
-          headers: { "Content-Type": "text/plain; charset=utf-8" },
-        });
+      if (!env.LIVE) return __daniLiveDown("falta la vinculación de servicio LIVE (Pages → Settings → Bindings)");
+      try {
+        return await env.LIVE.fetch(request);
+      } catch (err) {
+        return __daniLiveDown(\`el Worker « dani-live » no responde (\${err?.message || err})\`);
       }
-      return env.LIVE.fetch(request);
     }
     return __daniSite.fetch(request, env, ctx);
   },
 };
 `;
+
+function patchWorker(file) {
+  const code = fs.readFileSync(file, "utf8");
+  const at = code.indexOf(`// ── ${MARKER} ──`);
+  if (at !== -1) {
+    // Déjà branché : on met le relais à jour s'il a changé.
+    const updated = `${code.slice(0, at).replace(/\s*$/, "")}\n\n${WORKER_RELAY}`;
+    if (updated === code) return "already";
+    const saved = backup(file);
+    write(file, updated);
+    return saved ? `mis à jour (sauvegarde : ${saved})` : "mis à jour";
+  }
+  const exports = code.match(/^export\s+default\b/gm) || [];
+  // Seul le cas courant est modifié automatiquement : `export default { … }` ou `export default app;`.
+  if (exports.length !== 1 || /^export\s+default\s+(async\s+)?(class|function)\b/m.test(code)) return "manual";
+  const patched = `${code.replace(/^export\s+default\b/m, "const __daniSite =").replace(/\s*$/, "")}\n\n${WORKER_RELAY}`;
   const saved = backup(file);
   write(file, patched);
   return saved ? `patched (sauvegarde : ${saved})` : "patched";
