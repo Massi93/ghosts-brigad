@@ -23,6 +23,11 @@ function hub(env) {
 function decorate(response, extra = {}) {
   const copy = new Response(response.body, response);
   for (const [key, value] of Object.entries({ ...SECURITY_HEADERS, ...extra })) copy.headers.set(key, value);
+  // Textes en UTF-8 (accents, arabe) : l'encodage est toujours précisé.
+  const type = copy.headers.get("Content-Type") || "";
+  if (/^(text\/|application\/(javascript|json))/i.test(type) && !/charset=/i.test(type)) {
+    copy.headers.set("Content-Type", `${type}; charset=utf-8`);
+  }
   return copy;
 }
 
