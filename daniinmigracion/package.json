@@ -8,6 +8,7 @@
     "dev": "npm run build && wrangler dev",
     "dev:ui": "vite",
     "dev:site": "node scripts/dev-site.mjs",
+    "site:integrate": "node scripts/integrate-site.mjs",
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build",
     "deploy": "npm run build && wrangler deploy",
     "cockpit:password": "node scripts/cockpit-password.mjs",

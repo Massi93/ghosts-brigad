@@ -160,9 +160,11 @@ const TEXTS = {
 
 /** Langue de la page (es, fr ou ar). */
 export function pageLang() {
-  let lang = "";
+  // Lien d'un email : /live?lang=ar (langue de l'inscrit), retenue pour le site aussi.
+  let lang = new URLSearchParams(window.location.search).get("lang") || "";
   try {
-    lang = localStorage.getItem("lang") || "";
+    if (TEXTS[lang]) localStorage.setItem("lang", lang);
+    else lang = localStorage.getItem("lang") || "";
   } catch {
     // stockage indisponible
   }

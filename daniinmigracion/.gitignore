@@ -12,3 +12,4 @@ dist-demo
 # Cloudflare (wrangler) : variables locales et état des émulateurs
 .dev.vars
 .wrangler/
+.site-backup/

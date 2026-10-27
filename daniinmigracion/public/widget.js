@@ -34,6 +34,7 @@
   var I18N = {
     es: {
       label: "Próximo live",
+      liveLabel: "En directo",
       defaultTitle: "Lives en directo con Dani",
       defaultText: DEFAULT_SECTION_TEXT,
       noDate: "Aún no hay fecha para el próximo live. Inscríbete y te avisaremos por correo en cuanto Dani lo programe.",
@@ -62,6 +63,7 @@
     },
     fr: {
       label: "Prochain live",
+      liveLabel: "En direct",
       defaultTitle: "Lives en direct avec Dani",
       defaultText:
         "Connectez-vous en direct avec Dani : nous répondons à vos questions sur les visas, la résidence et la nationalité en temps réel.",
@@ -91,6 +93,7 @@
     },
     ar: {
       label: "البث المباشر القادم",
+      liveLabel: "مباشر الآن",
       defaultTitle: "بث مباشر مع داني",
       defaultText: "تواصل مباشرة مع داني: نجيب عن أسئلتك حول التأشيرات والإقامة والجنسية في الوقت الحقيقي.",
       noDate: "لم يُحدَّد بعد موعد البث المباشر القادم. سجّل الآن وسنخبرك عبر البريد الإلكتروني فور برمجته.",
@@ -144,6 +147,7 @@
     ".dl-pill.dl-inline{position:static;box-shadow:none}" +
     ".dl-pill:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(198,11,30,.25)}" +
     ".dl-pill[hidden]{display:none!important}" +
+    ".dl-section[hidden]{display:none!important}" +
     ".dl-pill.dl-active{background:var(--red,#c60b1e);border-color:var(--red,#c60b1e);color:#fff!important;animation:dl-ring 1.6s infinite}" +
     ".dl-dot{position:relative;width:9px;height:9px;border-radius:50%;background:currentColor;flex-shrink:0}" +
     ".dl-dot::after{content:'';position:absolute;inset:0;border-radius:50%;background:currentColor;animation:dl-ping 1.4s cubic-bezier(0,0,.2,1) infinite}" +
@@ -365,7 +369,9 @@
 
   var section = null;
   var form = { firstName: "", lastName: "", email: "", website: "" };
-  var formState = { status: "idle", error: "" }; // idle | sending | done | error
+  // idle | sending | done | error ; pour une erreur, on garde le code (le texte est
+  // traduit à l'affichage, pour suivre un changement de langue).
+  var formState = { status: "idle", code: null, httpStatus: 0 };
   var lastSectionKey = "";
 
   /**
@@ -373,7 +379,8 @@
    * vue dès le premier défilement ; sinon avant #contacto ou le pied de page.
    */
   function mountSection() {
-    section = el("section", { className: "sec dl-section", id: "proximo-live" });
+    // Cachée jusqu'au premier chargement réussi (pas de bande vide si le serveur ne répond pas).
+    section = el("section", { className: "sec dl-section", id: "proximo-live", hidden: "" });
     var custom = document.querySelector("[data-dani-live-section]");
     var hero = document.getElementById("hero");
     var anchor = document.getElementById("contacto") || document.querySelector("footer");
@@ -438,7 +445,7 @@
   function submit(event) {
     event.preventDefault();
     if (formState.status === "sending") return;
-    formState = { status: "sending", error: "" };
+    formState = { status: "sending", code: null, httpStatus: 0 };
     renderSection(true);
     fetch(API + "/registrations", {
       method: "POST",
@@ -461,11 +468,11 @@
       .then(function () {
         save({ firstName: form.firstName.trim(), liveId: status.live ? status.live.id : null });
         form = { firstName: "", lastName: "", email: "", website: "" };
-        formState = { status: "done", error: "" };
+        formState = { status: "done", code: null, httpStatus: 0 };
         renderSection(true);
       })
       .catch(function (err) {
-        formState = { status: "error", error: errorMessage(err && err.code, err && err.status) };
+        formState = { status: "error", code: err && err.code, httpStatus: err && err.status };
         renderSection(true);
       });
   }
@@ -506,7 +513,7 @@
               try {
                 localStorage.removeItem(STORAGE_KEY);
               } catch (e) {}
-              formState = { status: "idle", error: "" };
+              formState = { status: "idle", code: null, httpStatus: 0 };
               renderSection(true);
             },
           }),
@@ -540,7 +547,7 @@
         ]),
         field("email", tr.email, "email", "email", 254),
         honeypot,
-        formState.status === "error" ? el("p", { className: "dl-error", role: "alert", text: formState.error }) : null,
+        formState.status === "error" ? el("p", { className: "dl-error", role: "alert", text: errorMessage(formState.code, formState.httpStatus) }) : null,
         button,
         el("p", { className: "dl-privacy", text: tr.privacy }),
       ])
@@ -570,7 +577,10 @@
       var tr = t();
       var title = status.live ? status.live.title : tr.defaultTitle;
       var inner = el("div", { className: "sec-inner" }, [
-        el("div", { className: "sec-label dl-label" }, [el("span", { className: "dl-dot", "aria-hidden": "true" }), texts.label]),
+        el("div", { className: "sec-label dl-label" }, [
+          el("span", { className: "dl-dot", "aria-hidden": "true" }),
+          p.phase === "live" ? tr.liveLabel : texts.label,
+        ]),
         el("h2", { className: "sec-title", text: title }),
         el("div", { className: "sec-line" }),
         texts.text ? el("p", { className: "sec-desc", text: texts.text }) : null,

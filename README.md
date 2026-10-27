@@ -109,21 +109,21 @@ npm run cockpit:password -- "un-mot-de-passe-solide" # mot de passe du cockpit (
 
 **2. Brancher le Live sur le site** (projet Pages `dani-inmigracion`)
 
-1. Copier le dossier `site-integration/functions/` dans le dossier `functions/` du projet du site, à côté du `api/chat.js` de DanBot :
-   `functions/live/…`, `functions/cockpit/…`, `functions/api/live/…`.
-2. Dans `index.html` du site, juste avant `</body>`, ajouter :
-   ```html
-   <script src="/live/widget.js" defer></script>
-   ```
-3. Tableau de bord Cloudflare → **Workers & Pages** → projet **dani-inmigracion** → **Settings** → **Bindings** → **Add** → **Service binding** : nom `LIVE`, service `dani-live` (Production).
-4. Republier le site comme d'habitude :
+```bash
+npm run site:integrate -- "/chemin/du/dossier/du/site"   # dossier publié avec wrangler pages deploy
+```
+
+Le script copie les relais `functions/` (ou complète `_worker.js` si le site en a un : Cloudflare ignore alors `functions/`), ajoute `<script src="/live/widget.js" defer></script>` dans les pages HTML du site, et complète `_routes.json` / `wrangler.toml` s'ils existent. Détails et version « à la main » : [`site-integration/README.md`](daniinmigracion/site-integration/README.md).
+
+Puis :
+
+1. Tableau de bord Cloudflare → **Workers & Pages** → projet **dani-inmigracion** → **Settings** → **Bindings** → **Add** → **Service binding** : nom `LIVE`, service `dani-live` (Production).
+2. Republier le site comme d'habitude, depuis son dossier :
    ```bash
-   npx wrangler pages deploy . --project-name dani-inmigracion --branch main
+   npx wrangler pages deploy . --project-name dani-inmigracion --branch main --commit-dirty=true
    ```
 
-Si le projet du site contient un fichier `_routes.json` écrit à la main, il doit inclure `/live`, `/live/*`, `/cockpit`, `/cockpit/*` et `/api/live/*`.
-
-Ensuite, ouvrir https://www.daniinmigracion.com/cockpit (identifiant `dani` + le mot de passe choisi). Le site reste inchangé tant qu'aucun live n'est programmé.
+Ensuite, ouvrir https://www.daniinmigracion.com/cockpit (identifiant `dani` + le mot de passe choisi). La rubrique « Próximo live » (inscription) apparaît après le haut de page dès la mise en ligne ; le bouton LIVE n'apparaît que lorsqu'un live est programmé. La rubrique peut être masquée depuis le cockpit (Sitio).
 
 **3. Mises à jour du Live** : `npm run deploy` (le site n'a pas besoin d'être republié).
 
