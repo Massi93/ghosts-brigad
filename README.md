@@ -6,6 +6,8 @@ et l'ancienne maquette React du site utilisée pour le développement.
 
 ## Démarrage rapide
 
+Prérequis : **Node.js 22 ou plus récent** (`node -v` ; sinon installer la version LTS depuis https://nodejs.org).
+
 ```bash
 cd daniinmigracion
 npm install
