@@ -7,6 +7,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { emitWithAck } from "../lib/socket";
+import { translateServerMessage as tr } from "../lib/serverMessages";
 import { ChunkedRecorder } from "./recorder";
 
 // Débit vidéo max envoyé à chaque viewer (limite la bande passante montante de Dani).
@@ -25,15 +26,15 @@ function randomId() {
 function mediaErrorMessage(err) {
   switch (err?.name) {
     case "NotAllowedError":
-      return "Permiso denegado: autoriza la cámara y el micrófono en el navegador.";
+      return tr("Permiso denegado: autoriza la cámara y el micrófono en el navegador.");
     case "NotFoundError":
-      return "No se encontró ninguna cámara o micrófono.";
+      return tr("No se encontró ninguna cámara o micrófono.");
     case "NotReadableError":
-      return "La cámara o el micrófono ya están en uso por otra aplicación.";
+      return tr("La cámara o el micrófono ya están en uso por otra aplicación.");
     default:
       return window.isSecureContext
-        ? err?.message || "No se pudo acceder a la cámara."
-        : "La cámara solo funciona en https:// o en http://localhost.";
+        ? err?.message || tr("No se pudo acceder a la cámara.")
+        : tr("La cámara solo funciona en https:// o en http://localhost.");
   }
 }
 

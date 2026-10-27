@@ -4,6 +4,7 @@
 import { createContext, useCallback, useContext, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { useLang } from "./i18n";
 
 export function Card({ className = "", children, ...props }) {
   return (
@@ -79,8 +80,11 @@ export function Badge({ tone = "neutral", children, className = "", ...props }) 
 
 /** Mode d'envoi des emails (console = test, rien n'est envoyé). */
 export function MailModeBadge({ mail }) {
+  const { t } = useLang();
   if (!mail) return null;
-  if (mail.mode === "console") return <Badge tone="warning">Consola (prueba, no se envía nada)</Badge>;
+  if (mail.mode === "console") {
+    return <Badge tone="warning">{t("Consola (prueba, no se envía nada)", "Console (test, rien n'est envoyé)")}</Badge>;
+  }
   const label = { smtp: "SMTP", brevo: "Brevo", resend: "Resend" }[mail.mode] ?? mail.mode;
   return (
     <Badge tone="success">

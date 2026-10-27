@@ -19,7 +19,7 @@ Le site reste le projet Cloudflare Pages **dani-inmigracion**. Trois petits chan
    <script src="/live/widget.js" defer></script>
    ```
 
-   Le bouton LIVE s'accroche sous le menu (`#navbar`) et la rubrique s'insère avant `#contacto`.
+   Le bouton LIVE s'accroche sous le menu (`#navbar`) et la rubrique s'insère juste après le haut de page (`#hero`).
    Pour choisir d'autres emplacements : un élément `data-dani-live-button` et/ou `data-dani-live-section`.
 
 3. **Lier** le Worker : Cloudflare → Workers & Pages → **dani-inmigracion** → Settings → Bindings →

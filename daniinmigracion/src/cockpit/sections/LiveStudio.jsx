@@ -19,6 +19,7 @@ import { api } from "../../lib/api";
 import { formatBytes, formatDuration, formatLiveDate, useNow } from "../../lib/time";
 import { useCockpit } from "../CockpitContext";
 import { Badge, Button, Card, EmptyState, Field, SectionTitle, Stat, flag, inputClass, useToast } from "../ui";
+import { useLang } from "../i18n";
 
 /** Live pré-sélectionné via l'URL (#directo?live=12, depuis « Programación »). */
 function preselectedLiveId() {
@@ -27,17 +28,20 @@ function preselectedLiveId() {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-const PEER_LABELS = {
-  connected: { tone: "success", label: "Viendo" },
-  new: { tone: "warning", label: "Conectando" },
-  connecting: { tone: "warning", label: "Conectando" },
-  disconnected: { tone: "warning", label: "Inestable" },
-  failed: { tone: "danger", label: "Error" },
-};
+function peerLabel(state, t) {
+  return {
+    connected: { tone: "success", label: t("Viendo", "Regarde") },
+    new: { tone: "warning", label: t("Conectando", "Connexion") },
+    connecting: { tone: "warning", label: t("Conectando", "Connexion") },
+    disconnected: { tone: "warning", label: t("Inestable", "Instable") },
+    failed: { tone: "danger", label: t("Error", "Erreur") },
+  }[state];
+}
 
 export default function LiveStudio() {
   const { live, stats, viewers, offset, broadcasterSocketId, interruptedSince, graceSeconds, isBroadcasting, broadcaster } =
     useCockpit();
+  const { t, locale } = useLang();
   const toast = useToast();
   const now = useNow(1000, { offset });
   const videoRef = useRef(null);
@@ -70,18 +74,18 @@ export default function LiveStudio() {
   }, [b.stream]);
 
   const start = async () => {
-    const options = mode === "scheduled" && liveId ? { liveId } : { title: title || "Live con Dani" };
+    const options = mode === "scheduled" && liveId ? { liveId } : { title: title || t("Live con Dani", "Live avec Dani") };
     const ok = await b.goLive(options);
-    if (ok) toast("¡Estás en directo! 🔴");
+    if (ok) toast(t("¡Estás en directo! 🔴", "Vous êtes en direct ! 🔴"));
   };
 
   const resume = async (takeover = false) => {
     const ok = await b.goLive({ liveId: live.id, resume: true, takeover });
-    if (ok) toast("Transmisión reanudada");
+    if (ok) toast(t("Transmisión reanudada", "Diffusion reprise"));
   };
 
   const stop = async () => {
-    if (!window.confirm("¿Terminar el live para todos los espectadores?")) return;
+    if (!window.confirm(t("¿Terminar el live para todos los espectadores?", "Terminer le live pour tous les spectateurs ?"))) return;
     if (localLive) {
       await b.endLive();
     } else {
@@ -89,7 +93,7 @@ export default function LiveStudio() {
       await api("/admin/live/end", { method: "POST" }).catch((err) => toast(err.message, "error"));
       setEnding(false);
     }
-    toast("Live terminado. La grabación está en « Grabaciones ».");
+    toast(t("Live terminado. La grabación está en « Grabaciones ».", "Live terminé. L'enregistrement est dans « Enregistrements »."));
   };
 
   const startedAt = live?.startedAt ? Date.parse(live.startedAt) : null;
@@ -103,27 +107,38 @@ export default function LiveStudio() {
 
   return (
     <div>
-      <SectionTitle title="Directo" subtitle="Cámara, transmisión y espectadores en tiempo real." />
+      <SectionTitle
+        title={t("Directo", "Direct")}
+        subtitle={t("Cámara, transmisión y espectadores en tiempo real.", "Caméra, diffusion et spectateurs en temps réel.")}
+      />
 
       {/* Bandeaux d'état */}
       <div className="mb-5 flex flex-col gap-3">
         {b.error && <Banner tone="danger" text={b.error} />}
-        {b.revoked && <Banner tone="warning" text="Otra pestaña tomó el control de la transmisión." />}
+        {b.revoked && (
+          <Banner
+            tone="warning"
+            text={t("Otra pestaña tomó el control de la transmisión.", "Un autre onglet a pris le contrôle de la diffusion.")}
+          />
+        )}
         {live && !localLive && b.status !== "starting" && (!broadcasterSocketId || isBroadcasting) && (
           <Banner
             tone="warning"
             text={
               interruptedSince
-                ? `El live sigue abierto pero la cámara se desconectó. Se cerrará solo en ${formatDuration(Math.max(graceLeft, 0))} si no la reanudas.`
-                : "El live sigue abierto pero esta pestaña no está transmitiendo."
+                ? t(
+                    `El live sigue abierto pero la cámara se desconectó. Se cerrará solo en ${formatDuration(Math.max(graceLeft, 0))} si no la reanudas.`,
+                    `Le live est toujours ouvert mais la caméra s'est déconnectée. Il se fermera seul dans ${formatDuration(Math.max(graceLeft, 0))} si vous ne la relancez pas.`
+                  )
+                : t("El live sigue abierto pero esta pestaña no está transmitiendo.", "Le live est toujours ouvert mais cet onglet ne diffuse pas.")
             }
             actions={
               <>
                 <Button variant="danger" icon={Video} loading={b.status === "starting"} onClick={() => resume(false)}>
-                  Reanudar cámara
+                  {t("Reanudar cámara", "Relancer la caméra")}
                 </Button>
                 <Button variant="ghost" icon={Square} loading={ending} onClick={stop}>
-                  Terminar live
+                  {t("Terminar live", "Terminer le live")}
                 </Button>
               </>
             }
@@ -132,10 +147,10 @@ export default function LiveStudio() {
         {live && broadcasterSocketId && !isBroadcasting && !localLive && (
           <Banner
             tone="info"
-            text="Se está transmitiendo desde otra pestaña o dispositivo."
+            text={t("Se está transmitiendo desde otra pestaña o dispositivo.", "La diffusion se fait depuis un autre onglet ou appareil.")}
             actions={
               <Button variant="ghost" icon={Video} onClick={() => resume(true)}>
-                Transmitir desde aquí
+                {t("Transmitir desde aquí", "Diffuser d'ici")}
               </Button>
             }
           />
@@ -156,9 +171,9 @@ export default function LiveStudio() {
             {!b.stream && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
                 <Camera className="h-10 w-10 text-site-gray/70" />
-                <p className="text-sm text-site-gray">La cámara está apagada</p>
+                <p className="text-sm text-white/60">{t("La cámara está apagada", "La caméra est éteinte")}</p>
                 <Button variant="ghost" icon={Camera} onClick={() => b.startPreview()}>
-                  Activar cámara y micrófono
+                  {t("Activar cámara y micrófono", "Activer caméra et micro")}
                 </Button>
               </div>
             )}
@@ -169,17 +184,17 @@ export default function LiveStudio() {
                   <span className="font-mono">{formatDuration(duration)}</span>
                 </Badge>
               ) : (
-                b.stream && <Badge tone="overlay" className="px-3 py-1 text-xs">Vista previa</Badge>
+                b.stream && <Badge tone="overlay" className="px-3 py-1 text-xs">{t("Vista previa", "Aperçu")}</Badge>
               )}
             </div>
             {localLive && (
               <div className="absolute right-3 top-3">
-                <RecordingBadge recording={b.recording} />
+                <RecordingBadge recording={b.recording} t={t} locale={locale} />
               </div>
             )}
             {b.stream && !b.camOn && (
               <div className="absolute inset-0 grid place-items-center bg-black/80 text-sm text-white/70">
-                Cámara pausada (los espectadores ven una imagen negra)
+                {t("Cámara pausada (los espectadores ven una imagen negra)", "Caméra en pause (les spectateurs voient une image noire)")}
               </div>
             )}
           </div>
@@ -192,7 +207,7 @@ export default function LiveStudio() {
               onClick={b.toggleMic}
               disabled={!b.stream}
             >
-              {b.micOn ? "Micro activo" : "Micro silenciado"}
+              {b.micOn ? t("Micro activo", "Micro actif") : t("Micro silenciado", "Micro coupé")}
             </Button>
             <Button
               variant={b.camOn ? "ghost" : "danger"}
@@ -200,19 +215,19 @@ export default function LiveStudio() {
               onClick={b.toggleCam}
               disabled={!b.stream}
             >
-              {b.camOn ? "Cámara activa" : "Cámara pausada"}
+              {b.camOn ? t("Cámara activa", "Caméra active") : t("Cámara pausada", "Caméra en pause")}
             </Button>
             <select
               className={`${inputClass} w-auto max-w-[14rem] py-2`}
               value={b.selected.cameraId}
               onChange={(e) => b.selectDevice({ cameraId: e.target.value })}
               disabled={localLive || !b.devices.cameras.length}
-              aria-label="Cámara"
+              aria-label={t("Cámara", "Caméra")}
             >
-              <option value="">Cámara predeterminada</option>
+              <option value="">{t("Cámara predeterminada", "Caméra par défaut")}</option>
               {b.devices.cameras.map((d, i) => (
                 <option key={d.deviceId || i} value={d.deviceId}>
-                  {d.label || `Cámara ${i + 1}`}
+                  {d.label || `${t("Cámara", "Caméra")} ${i + 1}`}
                 </option>
               ))}
             </select>
@@ -221,12 +236,12 @@ export default function LiveStudio() {
               value={b.selected.micId}
               onChange={(e) => b.selectDevice({ micId: e.target.value })}
               disabled={localLive || !b.devices.mics.length}
-              aria-label="Micrófono"
+              aria-label={t("Micrófono", "Micro")}
             >
-              <option value="">Micrófono predeterminado</option>
+              <option value="">{t("Micrófono predeterminado", "Micro par défaut")}</option>
               {b.devices.mics.map((d, i) => (
                 <option key={d.deviceId || i} value={d.deviceId}>
-                  {d.label || `Micrófono ${i + 1}`}
+                  {d.label || `${t("Micrófono", "Micro")} ${i + 1}`}
                 </option>
               ))}
             </select>
@@ -238,25 +253,30 @@ export default function LiveStudio() {
           {localLive ? (
             <>
               <div>
-                <p className="text-xs uppercase tracking-wider text-site-gray">En directo</p>
+                <p className="text-xs uppercase tracking-wider text-site-gray">{t("En directo", "En direct")}</p>
                 <p className="mt-1 font-display text-xl font-bold">{live?.title}</p>
               </div>
               <Button variant="danger" icon={Square} loading={b.status === "stopping"} onClick={stop} className="py-3">
-                {b.status === "stopping" ? "Guardando grabación…" : "Terminar live"}
+                {b.status === "stopping" ? t("Guardando grabación…", "Sauvegarde de l'enregistrement…") : t("Terminar live", "Terminer le live")}
               </Button>
               <p className="text-xs text-site-gray">
-                La grabación se guarda automáticamente en Cloudflare cada 2 segundos.
+                {t(
+                  "La grabación se guarda automáticamente en Cloudflare cada 2 segundos.",
+                  "L'enregistrement est sauvegardé automatiquement chez Cloudflare toutes les 2 secondes."
+                )}
               </p>
             </>
           ) : live ? (
-            <p className="text-sm text-site-text">Hay un live abierto: usa los botones de arriba.</p>
+            <p className="text-sm text-site-text">
+              {t("Hay un live abierto: usa los botones de arriba.", "Un live est ouvert : utilisez les boutons ci-dessus.")}
+            </p>
           ) : (
             <>
-              <p className="font-display text-lg font-bold">Iniciar un live</p>
+              <p className="font-display text-lg font-bold">{t("Iniciar un live", "Démarrer un live")}</p>
               <div className="grid grid-cols-2 gap-1 rounded-xl bg-site-bg p-1 text-xs font-semibold">
                 {[
-                  ["scheduled", "Programado"],
-                  ["instant", "Inmediato"],
+                  ["scheduled", t("Programado", "Programmé")],
+                  ["instant", t("Inmediato", "Immédiat")],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -273,32 +293,35 @@ export default function LiveStudio() {
               </div>
 
               {mode === "scheduled" ? (
-                <Field label="Live programado">
+                <Field label={t("Live programado", "Live programmé")}>
                   <select className={inputClass} value={liveId ?? ""} onChange={(e) => setLiveId(Number(e.target.value))}>
                     {upcoming.map((l) => (
                       <option key={l.id} value={l.id}>
-                        {l.title} — {formatLiveDate(l.scheduledAt)}
+                        {l.title} — {formatLiveDate(l.scheduledAt, locale)}
                       </option>
                     ))}
                   </select>
                 </Field>
               ) : (
-                <Field label="Título del live">
+                <Field label={t("Título del live", "Titre du live")}>
                   <input
                     className={inputClass}
                     value={title}
                     maxLength={120}
-                    placeholder="Live con Dani"
+                    placeholder={t("Live con Dani", "Live avec Dani")}
                     onChange={(e) => setTitle(e.target.value)}
                   />
                 </Field>
               )}
 
               <Button variant="danger" icon={Radio} loading={busy} onClick={start} className="py-3">
-                Iniciar live
+                {t("Iniciar live", "Démarrer le live")}
               </Button>
               <p className="text-xs text-site-gray">
-                Se pedirá acceso a la cámara y al micrófono. El live se graba automáticamente.
+                {t(
+                  "Se pedirá acceso a la cámara y al micrófono. El live se graba automáticamente.",
+                  "L'accès à la caméra et au micro sera demandé. Le live est enregistré automatiquement."
+                )}
               </p>
             </>
           )}
@@ -307,30 +330,38 @@ export default function LiveStudio() {
 
       {/* Statistiques en temps réel */}
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Stat icon={Eye} label="Espectadores" value={stats.viewers} tone="text-emerald-600" />
-        <Stat icon={TrendingUp} label="Pico" value={stats.peakViewers} />
-        <Stat icon={Heart} label="Me gusta" value={stats.hearts} tone="text-pink-400" />
-        <Stat icon={Clock} label="Duración" value={live ? formatDuration(duration) : "—"} />
-        <Stat icon={Users} label="Conexiones" value={stats.totalViewers} hint="Total desde el inicio" />
+        <Stat icon={Eye} label={t("Espectadores", "Spectateurs")} value={stats.viewers} tone="text-emerald-600" />
+        <Stat icon={TrendingUp} label={t("Pico", "Pic")} value={stats.peakViewers} />
+        <Stat icon={Heart} label={t("Me gusta", "J'aime")} value={stats.hearts} tone="text-pink-400" />
+        <Stat icon={Clock} label={t("Duración", "Durée")} value={live ? formatDuration(duration) : "—"} />
+        <Stat
+          icon={Users}
+          label={t("Conexiones", "Connexions")}
+          value={stats.totalViewers}
+          hint={t("Total desde el inicio", "Total depuis le début")}
+        />
       </div>
 
       {/* Liste des viewers */}
       <Card className="mt-6 p-0">
         <div className="flex items-center justify-between border-b border-site-line px-5 py-4">
-          <p className="font-display font-bold">Espectadores conectados</p>
+          <p className="font-display font-bold">{t("Espectadores conectados", "Spectateurs connectés")}</p>
           <Badge tone="info">{viewers.length}</Badge>
         </div>
         {sortedViewers.length === 0 ? (
           <EmptyState
             icon={UserRound}
-            title="Nadie conectado por ahora"
-            text="Los espectadores aparecen aquí en cuanto abren la página del live (también en la sala de espera)."
+            title={t("Nadie conectado por ahora", "Personne n'est connecté pour l'instant")}
+            text={t(
+              "Los espectadores aparecen aquí en cuanto abren la página del live (también en la sala de espera).",
+              "Les spectateurs apparaissent ici dès qu'ils ouvrent la page du live (y compris en salle d'attente)."
+            )}
           />
         ) : (
           <ul className="divide-y divide-site-line">
             {sortedViewers.map((v) => {
               // État WebRTC vu par cet onglet, sinon celui fourni par le serveur (s'il en donne un).
-              const peer = PEER_LABELS[b.peerStates[v.id] ?? v.peerState];
+              const peer = peerLabel(b.peerStates[v.id] ?? v.peerState, t);
               return (
                 <li key={v.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-sm">
                   <span className="text-xl" aria-hidden="true">
@@ -348,7 +379,7 @@ export default function LiveStudio() {
                   {peer ? (
                     <Badge tone={peer.tone}>{peer.label}</Badge>
                   ) : (
-                    <Badge>{live ? "Sin vídeo" : "En espera"}</Badge>
+                    <Badge>{live ? t("Sin vídeo", "Sans vidéo") : t("En espera", "En attente")}</Badge>
                   )}
                 </li>
               );
@@ -377,19 +408,19 @@ function Banner({ tone, text, actions }) {
   );
 }
 
-function RecordingBadge({ recording }) {
+function RecordingBadge({ recording, t, locale }) {
   if (recording.status === "error") {
-    return <Badge tone="overlay" className="px-3 py-1 text-xs text-site-red-d">Grabación con error</Badge>;
+    return <Badge tone="overlay" className="px-3 py-1 text-xs text-red-300">{t("Grabación con error", "Erreur d'enregistrement")}</Badge>;
   }
   if (recording.status === "retrying") {
-    return <Badge tone="overlay" className="px-3 py-1 text-xs text-amber-700">REC · reconectando…</Badge>;
+    return <Badge tone="overlay" className="px-3 py-1 text-xs text-amber-300">{t("REC · reconectando…", "REC · reconnexion…")}</Badge>;
   }
   if (recording.status === "saving") {
-    return <Badge tone="overlay" className="px-3 py-1 text-xs">Guardando…</Badge>;
+    return <Badge tone="overlay" className="px-3 py-1 text-xs">{t("Guardando…", "Sauvegarde…")}</Badge>;
   }
   return (
     <Badge tone="overlay" className="px-3 py-1 text-xs">
-      <span className="text-site-red">●</span> REC {formatBytes(recording.bytes)}
+      <span className="text-site-red">●</span> REC {formatBytes(recording.bytes, locale)}
     </Badge>
   );
 }

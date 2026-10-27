@@ -145,7 +145,8 @@ export function reminderEmail(registration, live, kind, msBefore) {
 /** Email manuel envoyé depuis le cockpit. `message` est du texte brut (écrit par Dani). */
 export function manualEmail(registration, { subject, message }) {
   const lang = normalizeLang(registration.lang);
-  const personalized = message.replace(/\{nombre\}/gi, registration.first_name);
+  // {nombre} (ou {prenom} / {prénom}) = prénom de l'inscrit.
+  const personalized = message.replace(/\{(nombre|pr[ée]nom)\}/gi, registration.first_name);
   const paragraphs = personalized
     .split(/\n{2,}/)
     .map((para) => p(escapeHtml(para).replace(/\n/g, "<br>")))

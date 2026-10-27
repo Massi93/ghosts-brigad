@@ -3,47 +3,58 @@ import { CheckCircle2, Clock, Download, Mail, Search, Send, Trash2, Users, XCirc
 import { api, apiFileUrl } from "../../lib/api";
 import { formatDateTime, formatLiveDate } from "../../lib/time";
 import { useCockpit } from "../CockpitContext";
+import { useLang } from "../i18n";
 import { Badge, Button, Card, EmptyState, Field, SectionTitle, inputClass, useToast } from "../ui";
 
-const KIND_LABELS = {
-  confirmation: "Confirmación",
-  reminder_3h: "Recordatorio 3 h",
-  reminder_5m: "Recordatorio 5 min",
-  manual: "Envío manual",
-};
+function kindLabel(kind, t) {
+  return (
+    {
+      confirmation: t("Confirmación", "Confirmation"),
+      reminder_3h: t("Recordatorio 3 h", "Rappel 3 h"),
+      reminder_5m: t("Recordatorio 5 min", "Rappel 5 min"),
+      manual: t("Envío manual", "Envoi manuel"),
+    }[kind] ?? "Email"
+  );
+}
 
-function defaultMessage(next) {
-  const when = next?.scheduledAt ? `el ${formatLiveDate(next.scheduledAt)}` : "muy pronto";
-  return `Hola {nombre}:\n\nTe recordamos que nuestro próximo live «${next?.title ?? "Live con Dani"}» será ${when}.\n\nPrepara tus preguntas: ¡nos vemos en directo!\n\nDani`;
+/** Message pré-rempli (langue du cockpit). {nombre} = prénom de chaque inscrit. */
+function defaultMessage(next, lang, locale) {
+  const date = next?.scheduledAt ? formatLiveDate(next.scheduledAt, locale) : null;
+  if (lang === "fr") {
+    return `Bonjour {nombre},\n\nNous vous rappelons que notre prochain live « ${next?.title ?? "Live avec Dani"} » aura lieu ${date ? `le ${date}` : "très bientôt"}.\n\nPréparez vos questions : on se retrouve en direct !\n\nDani`;
+  }
+  return `Hola {nombre}:\n\nTe recordamos que nuestro próximo live «${next?.title ?? "Live con Dani"}» será ${date ? `el ${date}` : "muy pronto"}.\n\nPrepara tus preguntas: ¡nos vemos en directo!\n\nDani`;
 }
 
 /** Statut d'envoi affiché pour un inscrit. */
 function EmailStatus({ status, kind, error }) {
+  const { t } = useLang();
   if (!status) return <span className="text-xs text-site-gray/70">—</span>;
-  const label = KIND_LABELS[kind] ?? "Email";
+  const label = kindLabel(kind, t);
   if (status === "sent") {
     return (
       <Badge tone="success" title={label}>
-        <CheckCircle2 className="h-3 w-3" /> Enviado
+        <CheckCircle2 className="h-3 w-3" /> {t("Enviado", "Envoyé")}
       </Badge>
     );
   }
   if (status === "failed") {
     return (
       <Badge tone="danger" title={error || label}>
-        <XCircle className="h-3 w-3" /> Error
+        <XCircle className="h-3 w-3" /> {t("Error", "Erreur")}
       </Badge>
     );
   }
   return (
     <Badge tone="warning" title={label}>
-      <Clock className="h-3 w-3" /> Enviando…
+      <Clock className="h-3 w-3" /> {t("Enviando…", "Envoi…")}
     </Badge>
   );
 }
 
 export default function Registrants() {
   const { next, live, onMail } = useCockpit();
+  const { t, lang, locale } = useLang();
   const toast = useToast();
 
   const [rows, setRows] = useState([]);
@@ -67,12 +78,19 @@ export default function Registrants() {
 
   useEffect(load, [load]);
 
-  // Message pré-rempli avec le prochain live.
+  // Message pré-rempli avec le prochain live (et réécrit au changement de langue s'il n'a pas été modifié).
   const target = live ?? next;
+  const prefill = useRef({ subject: "", message: "" });
   useEffect(() => {
-    setSubject((s) => s || `Recordatorio: ${target?.title ?? "nuestro próximo live"}`);
-    setMessage((m) => m || defaultMessage(target));
-  }, [target]);
+    const subjectText =
+      lang === "fr"
+        ? `Rappel : ${target?.title ?? "notre prochain live"}`
+        : `Recordatorio: ${target?.title ?? "nuestro próximo live"}`;
+    const messageText = defaultMessage(target, lang, locale);
+    setSubject((s) => (!s || s === prefill.current.subject ? subjectText : s));
+    setMessage((m) => (!m || m === prefill.current.message ? messageText : m));
+    prefill.current = { subject: subjectText, message: messageText };
+  }, [target, lang, locale]);
 
   const eventsFor = (batchId) => {
     if (!batchEvents.current.has(batchId)) batchEvents.current.set(batchId, { progress: new Map(), done: null });
@@ -106,11 +124,17 @@ export default function Registrants() {
           );
         } else if (type === "done") {
           entry.done = data;
-          toast(`Envío terminado: ${data.sent} enviados${data.failed ? `, ${data.failed} con error` : ""}`, data.failed ? "error" : "success");
+          toast(
+            t(
+              `Envío terminado: ${data.sent} enviados${data.failed ? `, ${data.failed} con error` : ""}`,
+              `Envoi terminé : ${data.sent} envoyé(s)${data.failed ? `, ${data.failed} en erreur` : ""}`
+            ),
+            data.failed ? "error" : "success"
+          );
         }
         setBatch((b) => (b && b.batchId === data.batchId ? { ...b, ...countOf(entry) } : b));
       }),
-    [onMail, toast]
+    [onMail, toast, t]
   );
 
   const filtered = useMemo(() => {
@@ -141,8 +165,8 @@ export default function Registrants() {
 
   const send = async () => {
     const ids = [...selected];
-    if (!ids.length) return toast("Marca al menos un destinatario", "error");
-    if (!window.confirm(`¿Enviar este correo a ${ids.length} inscrito(s)?`)) return;
+    if (!ids.length) return toast(t("Marca al menos un destinatario", "Cochez au moins un destinataire"), "error");
+    if (!window.confirm(t(`¿Enviar este correo a ${ids.length} inscrito(s)?`, `Envoyer cet e-mail à ${ids.length} inscrit(s) ?`))) return;
     setSending(true);
     try {
       const res = await api("/admin/notify", {
@@ -170,7 +194,15 @@ export default function Registrants() {
   };
 
   const remove = async (r) => {
-    if (!window.confirm(`¿Eliminar a ${r.firstName} ${r.lastName} (${r.email})? Esta acción es definitiva.`)) return;
+    if (
+      !window.confirm(
+        t(
+          `¿Eliminar a ${r.firstName} ${r.lastName} (${r.email})? Esta acción es definitiva.`,
+          `Supprimer ${r.firstName} ${r.lastName} (${r.email}) ? Cette action est définitive.`
+        )
+      )
+    )
+      return;
     try {
       await api(`/admin/registrations/${r.id}`, { method: "DELETE" });
       setRows((list) => list.filter((x) => x.id !== r.id));
@@ -179,7 +211,7 @@ export default function Registrants() {
         nextSet.delete(r.id);
         return nextSet;
       });
-      toast("Inscrito eliminado");
+      toast(t("Inscrito eliminado", "Inscrit supprimé"));
     } catch (err) {
       toast(err.message, "error");
     }
@@ -188,14 +220,14 @@ export default function Registrants() {
   return (
     <div>
       <SectionTitle
-        title="Inscritos"
-        subtitle={`${activeCount} activos · ${rows.length} en total`}
+        title={t("Inscritos", "Inscrits")}
+        subtitle={t(`${activeCount} activos · ${rows.length} en total`, `${activeCount} actifs · ${rows.length} au total`)}
         actions={
           <a
             href={apiFileUrl("/admin/registrations.csv")}
-            className="inline-flex items-center gap-2 rounded-xl border border-site-line bg-site-bg px-4 py-2.5 text-sm font-semibold hover:bg-[#eef1f6]"
+            className="inline-flex items-center gap-2 rounded-full border border-site-line bg-white px-5 py-2.5 text-sm font-bold text-site-ink transition hover:border-site-teal hover:text-site-teal-d"
           >
-            <Download className="h-4 w-4" /> Exportar CSV
+            <Download className="h-4 w-4" /> {t("Exportar CSV", "Exporter en CSV")}
           </a>
         }
       />
@@ -212,14 +244,14 @@ export default function Registrants() {
                 disabled={!selectable.length}
                 className="h-4 w-4 accent-site-red"
               />
-              Seleccionar todo
+              {t("Seleccionar todo", "Tout sélectionner")}
             </label>
-            <Badge tone="info">{selected.size} seleccionados</Badge>
+            <Badge tone="info">{t(`${selected.size} seleccionados`, `${selected.size} sélectionné(s)`)}</Badge>
             <div className="relative ml-auto w-full sm:w-64">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-site-gray/70" />
               <input
                 className={`${inputClass} py-2 pl-9`}
-                placeholder="Buscar nombre o email"
+                placeholder={t("Buscar nombre o email", "Rechercher un nom ou un e-mail")}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -229,8 +261,15 @@ export default function Registrants() {
           {!loading && filtered.length === 0 ? (
             <EmptyState
               icon={Users}
-              title={rows.length ? "Sin resultados" : "Todavía no hay inscritos"}
-              text={rows.length ? null : "Las inscripciones del formulario « Próximo live » aparecerán aquí."}
+              title={rows.length ? t("Sin resultados", "Aucun résultat") : t("Todavía no hay inscritos", "Pas encore d'inscrits")}
+              text={
+                rows.length
+                  ? null
+                  : t(
+                      "Las inscripciones del formulario « Próximo live » aparecerán aquí.",
+                      "Les inscriptions du formulaire « Prochain live » apparaîtront ici."
+                    )
+              }
             />
           ) : (
             <>
@@ -240,11 +279,11 @@ export default function Registrants() {
                   <thead className="text-xs uppercase tracking-wider text-site-gray">
                     <tr>
                       <th className="w-10 px-5 py-3" />
-                      <th className="px-3 py-3 font-medium">Nombre</th>
-                      <th className="px-3 py-3 font-medium">Apellido</th>
+                      <th className="px-3 py-3 font-medium">{t("Nombre", "Prénom")}</th>
+                      <th className="px-3 py-3 font-medium">{t("Apellido", "Nom")}</th>
                       <th className="px-3 py-3 font-medium">Email</th>
-                      <th className="px-3 py-3 font-medium">Inscripción</th>
-                      <th className="px-3 py-3 font-medium">Último envío</th>
+                      <th className="px-3 py-3 font-medium">{t("Inscripción", "Inscription")}</th>
+                      <th className="px-3 py-3 font-medium">{t("Último envío", "Dernier envoi")}</th>
                       <th className="w-10 px-3 py-3" />
                     </tr>
                   </thead>
@@ -257,7 +296,7 @@ export default function Registrants() {
                             checked={selected.has(r.id)}
                             onChange={() => toggle(r.id)}
                             disabled={Boolean(r.unsubscribedAt)}
-                            aria-label={`Seleccionar ${r.email}`}
+                            aria-label={`${t("Seleccionar", "Sélectionner")} ${r.email}`}
                             className="h-4 w-4 accent-site-red"
                           />
                         </td>
@@ -265,9 +304,9 @@ export default function Registrants() {
                         <td className="px-3 py-3">{r.lastName}</td>
                         <td className="px-3 py-3 text-site-text">
                           {r.email}
-                          {r.unsubscribedAt && <Badge className="ml-2">Baja</Badge>}
+                          {r.unsubscribedAt && <Badge className="ml-2">{t("Baja", "Désinscrit")}</Badge>}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-site-gray">{formatDateTime(r.createdAt)}</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-site-gray">{formatDateTime(r.createdAt, locale)}</td>
                         <td className="px-3 py-3">
                           <EmailStatus {...(r.lastEmail ?? {})} />
                         </td>
@@ -275,7 +314,7 @@ export default function Registrants() {
                           <button
                             type="button"
                             onClick={() => remove(r)}
-                            aria-label="Eliminar"
+                            aria-label={t("Eliminar", "Supprimer")}
                             className="rounded-lg p-1.5 text-site-gray hover:bg-site-bg hover:text-site-red"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -296,7 +335,7 @@ export default function Registrants() {
                       checked={selected.has(r.id)}
                       onChange={() => toggle(r.id)}
                       disabled={Boolean(r.unsubscribedAt)}
-                      aria-label={`Seleccionar ${r.email}`}
+                      aria-label={`${t("Seleccionar", "Sélectionner")} ${r.email}`}
                       className="mt-1 h-4 w-4 accent-site-red"
                     />
                     <div className="min-w-0 flex-1">
@@ -305,15 +344,15 @@ export default function Registrants() {
                       </p>
                       <p className="truncate text-sm text-site-text">{r.email}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-site-gray">
-                        {formatDateTime(r.createdAt)}
+                        {formatDateTime(r.createdAt, locale)}
                         <EmailStatus {...(r.lastEmail ?? {})} />
-                        {r.unsubscribedAt && <Badge>Baja</Badge>}
+                        {r.unsubscribedAt && <Badge>{t("Baja", "Désinscrit")}</Badge>}
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => remove(r)}
-                      aria-label="Eliminar"
+                      aria-label={t("Eliminar", "Supprimer")}
                       className="rounded-lg p-1.5 text-site-gray hover:text-site-red"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -328,12 +367,18 @@ export default function Registrants() {
         {/* Envoi manuel */}
         <Card className="flex h-fit flex-col gap-4">
           <p className="flex items-center gap-2 font-display text-lg font-bold">
-            <Mail className="h-5 w-5 text-site-red" /> Notificar por email
+            <Mail className="h-5 w-5 text-site-red" /> {t("Notificar por email", "Prévenir par e-mail")}
           </p>
-          <Field label="Asunto">
+          <Field label={t("Asunto", "Objet")}>
             <input className={inputClass} maxLength={150} value={subject} onChange={(e) => setSubject(e.target.value)} />
           </Field>
-          <Field label="Mensaje" hint="{nombre} se reemplaza por el nombre de cada inscrito. Se añade un enlace a la página del live.">
+          <Field
+            label={t("Mensaje", "Message")}
+            hint={t(
+              "{nombre} se reemplaza por el nombre de cada inscrito. Se añade un enlace a la página del live.",
+              "{nombre} est remplacé par le prénom de chaque inscrit. Un lien vers la page du live est ajouté."
+            )}
+          >
             <textarea
               className={`${inputClass} min-h-[180px]`}
               maxLength={10_000}
@@ -342,25 +387,35 @@ export default function Registrants() {
             />
           </Field>
           <Button icon={Send} loading={sending} onClick={send} disabled={!selected.size || !subject.trim() || !message.trim()}>
-            Enviar a {selected.size} seleccionado{selected.size === 1 ? "" : "s"}
+            {t(
+              `Enviar a ${selected.size} seleccionado${selected.size === 1 ? "" : "s"}`,
+              `Envoyer à ${selected.size} sélectionné${selected.size > 1 ? "s" : ""}`
+            )}
           </Button>
 
           {batch && (
             <div className="rounded-2xl border border-site-line bg-site-bg p-4 text-sm">
               <div className="flex items-center justify-between">
-                <span className="font-semibold">{batch.done ? "Envío terminado" : "Enviando…"}</span>
+                <span className="font-semibold">
+                  {batch.done ? t("Envío terminado", "Envoi terminé") : t("Enviando…", "Envoi…")}
+                </span>
                 <span className="tabular-nums text-site-text">
                   {batch.sent + batch.failed}/{batch.total}
                 </span>
               </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-site-bg">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-site-line">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-site-red to-site-gold transition-all"
                   style={{ width: `${batch.total ? ((batch.sent + batch.failed) / batch.total) * 100 : 100}%` }}
                 />
               </div>
               <p className="mt-2 text-xs text-site-gray">
-                ✅ {batch.sent} enviados {batch.failed > 0 && <span className="text-site-red-d">· ❌ {batch.failed} con error</span>}
+                ✅ {batch.sent} {t("enviados", "envoyé(s)")}{" "}
+                {batch.failed > 0 && (
+                  <span className="text-site-red-d">
+                    · ❌ {batch.failed} {t("con error", "en erreur")}
+                  </span>
+                )}
               </p>
             </div>
           )}

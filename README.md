@@ -42,15 +42,18 @@ sur `www.daniinmigracion.com/live`, et Dani pilote tout depuis `www.daniinmigrac
 - **Site** (`public/widget.js`, ajouté au site avec une seule ligne) :
   - bouton **LIVE** rouge clignotant sous le menu dès qu'un live est programmé ;
   - pendant les 5 dernières minutes, un chronomètre 05:00 → 00:00 à côté ; à 00:00 (ou dès que Dani est en direct), le bouton devient actif et ouvre `/live` ;
-  - rubrique « Próximo live » avant la section Contacto : date dans le fuseau du visiteur, compte à rebours, formulaire d'inscription (prénom, nom, email) ;
+  - rubrique « Próximo live » juste après le haut de page : date dans le fuseau du visiteur, compte à rebours, formulaire d'inscription (prénom, nom, email) ;
   - mêmes styles que le site, et même langue : espagnol, français, arabe (de droite à gauche), y compris quand le visiteur change de langue.
-- **Page `/live`** : plein écran, mobile d'abord, dans la langue du site. Le viewer regarde seulement (ni chat, ni commentaires, ni micro). Il peut envoyer des « me gusta » : bouton cœur ou double-tap sur la vidéo. Les cœurs animés montent à l'écran façon TikTok, sont visibles par tous les viewers et comptés dans le cockpit.
+- **Page `/live`**, pensée d'abord pour le téléphone, dans la langue du site :
+  - avant et après le live : page claire aux couleurs du site, avec compte à rebours, « ajouter à mon agenda » (.ics) et inscription aux rappels ;
+  - pendant le live : vidéo plein écran ; le premier toucher active le son, l'écran reste allumé, et un bouton passe de « ajusté » à « plein écran rempli » ;
+  - le viewer regarde seulement (ni chat, ni commentaires, ni micro). Il peut envoyer des « me gusta » : bouton cœur ou double-tap sur la vidéo. Les cœurs animés montent à l'écran façon TikTok, sont visibles par tous les viewers et comptés dans le cockpit.
 - **Emails automatiques**, dans la langue de l'inscrit :
   - confirmation à l'inscription ;
   - rappel **3 h avant** et **5 min avant** chaque live programmé ;
   - lien de désinscription dans chaque email, et bouton natif « Se désabonner » dans Gmail / Outlook.
 
-Le cockpit est en espagnol. Le code est commenté en français.
+Le cockpit est en espagnol ou en français (bouton ES / FR). Le code est commenté en français.
 
 ### Architecture
 

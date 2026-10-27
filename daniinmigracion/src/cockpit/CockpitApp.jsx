@@ -16,7 +16,8 @@ import { formatDuration, useNow } from "../lib/time";
 import LoginPage from "./LoginPage";
 import { CockpitProvider, useCockpit } from "./CockpitContext";
 import { ToastProvider } from "./ui";
-import logoUrl from "../assets/logo-dani.jpg?inline";
+import { CockpitLangProvider, LangSwitch, useLang } from "./i18n";
+import logoUrl from "../assets/logo-dani.jpg";
 import Overview from "./sections/Overview";
 import LiveStudio from "./sections/LiveStudio";
 import Schedule from "./sections/Schedule";
@@ -26,12 +27,12 @@ import SiteSettings from "./sections/SiteSettings";
 
 /** Sections du tableau de bord (la section active est dans l'ancre de l'URL). */
 const SECTIONS = [
-  { id: "resumen", label: "Resumen", icon: LayoutDashboard, component: Overview },
-  { id: "directo", label: "Directo", icon: Radio, component: LiveStudio },
-  { id: "programacion", label: "Programación", icon: CalendarClock, component: Schedule },
-  { id: "inscritos", label: "Inscritos", icon: Users, component: Registrants },
-  { id: "grabaciones", label: "Grabaciones", icon: Film, component: Recordings },
-  { id: "sitio", label: "Sitio", icon: Settings2, component: SiteSettings },
+  { id: "resumen", label: ["Resumen", "Résumé"], icon: LayoutDashboard, component: Overview },
+  { id: "directo", label: ["Directo", "Direct"], icon: Radio, component: LiveStudio },
+  { id: "programacion", label: ["Programación", "Programmation"], icon: CalendarClock, component: Schedule },
+  { id: "inscritos", label: ["Inscritos", "Inscrits"], icon: Users, component: Registrants },
+  { id: "grabaciones", label: ["Grabaciones", "Enregistrements"], icon: Film, component: Recordings },
+  { id: "sitio", label: ["Sitio", "Site"], icon: Settings2, component: SiteSettings },
 ];
 
 function goToLogin() {
@@ -41,8 +42,7 @@ function goToLogin() {
 
 export default function CockpitApp() {
   const path = currentPath().replace(/\/+$/, "");
-  if (path === "/cockpit/login") return <LoginPage />;
-  return <AuthGate />;
+  return <CockpitLangProvider>{path === "/cockpit/login" ? <LoginPage /> : <AuthGate />}</CockpitLangProvider>;
 }
 
 /** Vérifie la session avant d'afficher le tableau de bord. */
@@ -89,6 +89,7 @@ function useHashSection() {
 }
 
 function Dashboard({ admin }) {
+  const { t } = useLang();
   const section = useHashSection();
   const current = SECTIONS.find((s) => s.id === section);
   const Section = current.component;
@@ -115,14 +116,18 @@ function Dashboard({ admin }) {
             ))}
           </nav>
           <div className="mt-auto flex flex-col gap-1 border-t border-site-line pt-4">
-            <ExternalNav href="/" label="Ver el sitio" />
-            <ExternalNav href="/live" label="Página del live" />
+            <div className="flex items-center justify-between px-4 pb-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-site-gray">{t("Idioma", "Langue")}</span>
+              <LangSwitch />
+            </div>
+            <ExternalNav href="/" label={t("Ver el sitio", "Voir le site")} />
+            <ExternalNav href="/live" label={t("Página del live", "Page du live")} />
             <button
               type="button"
               onClick={logout}
               className="flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium text-site-text transition hover:bg-site-red-l hover:text-site-red"
             >
-              <LogOut className="h-4 w-4" /> Cerrar sesión ({admin.username})
+              <LogOut className="h-4 w-4" /> {t("Cerrar sesión", "Se déconnecter")} ({admin.username})
             </button>
           </div>
         </div>
@@ -136,13 +141,14 @@ function Dashboard({ admin }) {
             <div className="lg:hidden">
               <Brand compact />
             </div>
-            <p className="hidden text-xs font-bold uppercase tracking-[0.18em] text-site-ink lg:block">{current.label}</p>
+            <p className="hidden text-xs font-bold uppercase tracking-[0.18em] text-site-ink lg:block">{t(...current.label)}</p>
             <div className="flex items-center gap-2">
               <LivePill />
+              <LangSwitch className="lg:hidden" />
               <button
                 type="button"
                 onClick={logout}
-                aria-label="Cerrar sesión"
+                aria-label={t("Cerrar sesión", "Se déconnecter")}
                 className="grid h-9 w-9 place-items-center rounded-full border border-site-line bg-white text-site-text lg:hidden"
               >
                 <LogOut className="h-4 w-4" />
@@ -163,7 +169,7 @@ function Dashboard({ admin }) {
                       : "border border-site-line bg-white text-site-text hover:text-site-ink"
                   }`}
                 >
-                  <Icon className="h-4 w-4" /> {s.label}
+                  <Icon className="h-4 w-4" /> {t(...s.label)}
                 </a>
               );
             })}
@@ -186,7 +192,7 @@ function Brand({ compact = false }) {
         alt="Dani Inmigración"
         className={`${compact ? "h-10 w-10" : "h-12 w-12"} shrink-0 rounded-full bg-white shadow-[0_3px_14px_rgba(0,0,0,0.12)]`}
       />
-      <span className="leading-tight">
+      <span className={compact ? "hidden leading-tight sm:block" : "leading-tight"}>
         <span className="block text-[15px] font-extrabold tracking-tight text-site-ink">Dani Inmigración</span>
         <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-site-gray">
           {compact ? "Cockpit" : "Cockpit · Lives"}
@@ -197,6 +203,7 @@ function Brand({ compact = false }) {
 }
 
 function NavLink({ item, active }) {
+  const { t } = useLang();
   const Icon = item.icon;
   return (
     <a
@@ -207,7 +214,7 @@ function NavLink({ item, active }) {
           : "text-site-text hover:bg-site-bg hover:text-site-ink"
       }`}
     >
-      <Icon className="h-4 w-4" /> {item.label}
+      <Icon className="h-4 w-4" /> {t(...item.label)}
     </a>
   );
 }
@@ -228,19 +235,20 @@ function ExternalNav({ href, label }) {
 /** Indicateur permanent : en direct (durée, viewers, cœurs) ou hors ligne. */
 function LivePill() {
   const { live, stats, offset, connected } = useCockpit();
+  const { t } = useLang();
   const now = useNow(1000, { enabled: Boolean(live), offset });
 
   if (!connected) {
     return (
-      <span className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Conectando…
+      <span className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("Conectando…", "Connexion…")}
       </span>
     );
   }
   if (!live) {
     return (
-      <span className="rounded-full border border-site-line bg-white px-3 py-1.5 text-xs font-semibold text-site-gray">
-        Sin directo
+      <span className="whitespace-nowrap rounded-full border border-site-line bg-white px-3 py-1.5 text-xs font-semibold text-site-gray">
+        {t("Sin directo", "Hors direct")}
       </span>
     );
   }
@@ -251,7 +259,7 @@ function LivePill() {
     >
       <span className="live-blink">
         ● <span className="sm:hidden">LIVE</span>
-        <span className="hidden sm:inline">EN DIRECTO</span>
+        <span className="hidden sm:inline">{t("EN DIRECTO", "EN DIRECT")}</span>
       </span>
       <span className="font-mono tabular-nums">{formatDuration(now - Date.parse(live.startedAt))}</span>
       <span className="hidden sm:inline">· 👁 {stats.viewers} · ❤️ {stats.hearts}</span>

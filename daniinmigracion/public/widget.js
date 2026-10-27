@@ -9,7 +9,7 @@
  *    live est programmé, avec le compte à rebours 05:00 → 00:00 les 5 dernières
  *    minutes ; à 00:00 (ou en direct) il devient actif et ouvre la page /live ;
  *  - ajoute la rubrique « Próximo live » (date, compte à rebours, formulaire
- *    d'inscription nom / prénom / email) avant la section #contacto ;
+ *    d'inscription nom / prénom / email) juste après le haut de page (#hero) ;
  *  - suit la langue du site (es / fr / ar, sens de lecture compris).
  *
  * Emplacements personnalisables (facultatif) : un élément `data-dani-live-button`
@@ -368,13 +368,19 @@
   var formState = { status: "idle", error: "" }; // idle | sending | done | error
   var lastSectionKey = "";
 
+  /**
+   * Emplacement de la rubrique : juste après le haut de page (#hero), pour être
+   * vue dès le premier défilement ; sinon avant #contacto ou le pied de page.
+   */
   function mountSection() {
-    var custom = document.querySelector("[data-dani-live-section]");
-    var anchor = document.getElementById("contacto") || document.querySelector("footer");
-    if (!custom && !anchor) return;
     section = el("section", { className: "sec dl-section", id: "proximo-live" });
+    var custom = document.querySelector("[data-dani-live-section]");
+    var hero = document.getElementById("hero");
+    var anchor = document.getElementById("contacto") || document.querySelector("footer");
     if (custom) custom.appendChild(section);
-    else anchor.parentNode.insertBefore(section, anchor);
+    else if (hero && hero.parentNode) hero.parentNode.insertBefore(section, hero.nextSibling);
+    else if (anchor) anchor.parentNode.insertBefore(section, anchor);
+    else section = null;
   }
 
   function sectionTexts() {

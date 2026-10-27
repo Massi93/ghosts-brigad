@@ -3,16 +3,22 @@ import { Download, Film, PlayCircle, Trash2, X } from "lucide-react";
 import { api, apiFileUrl } from "../../lib/api";
 import { formatBytes, formatDateTime, formatDuration } from "../../lib/time";
 import { useCockpit } from "../CockpitContext";
+import { useLang } from "../i18n";
 import { Badge, Button, Card, EmptyState, SectionTitle, useToast } from "../ui";
 
-const STATUS = {
-  recording: { tone: "live", label: "Grabando" },
-  ready: { tone: "success", label: "Lista" },
-  failed: { tone: "danger", label: "Error" },
-};
+function statusOf(status, t) {
+  return (
+    {
+      recording: { tone: "live", label: t("Grabando", "Enregistrement…") },
+      ready: { tone: "success", label: t("Lista", "Prête") },
+      failed: { tone: "danger", label: t("Error", "Erreur") },
+    }[status] ?? { tone: "success", label: t("Lista", "Prête") }
+  );
+}
 
 export default function Recordings() {
   const { recordingsVersion } = useCockpit();
+  const { t, locale } = useLang();
   const toast = useToast();
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,11 +35,11 @@ export default function Recordings() {
   useEffect(load, [load, recordingsVersion]);
 
   const remove = async (r) => {
-    if (!window.confirm(`¿Eliminar definitivamente « ${r.filename} »?`)) return;
+    if (!window.confirm(t(`¿Eliminar definitivamente « ${r.filename} »?`, `Supprimer définitivement « ${r.filename} » ?`))) return;
     try {
       await api(`/admin/recordings/${r.id}`, { method: "DELETE" });
       if (playing === r.id) setPlaying(null);
-      toast("Grabación eliminada");
+      toast(t("Grabación eliminada", "Enregistrement supprimé"));
       load();
     } catch (err) {
       toast(err.message, "error");
@@ -43,18 +49,25 @@ export default function Recordings() {
   return (
     <div>
       <SectionTitle
-        title="Grabaciones"
-        subtitle="Cada live se graba automáticamente y se guarda en Cloudflare (R2). Puedes verlo o descargarlo aquí."
+        title={t("Grabaciones", "Enregistrements")}
+        subtitle={t(
+          "Cada live se graba automáticamente y se guarda en Cloudflare (R2). Puedes verlo o descargarlo aquí.",
+          "Chaque live est enregistré automatiquement et conservé chez Cloudflare (R2). Vous pouvez le regarder ou le télécharger ici."
+        )}
       />
 
       {!loading && recordings.length === 0 ? (
         <Card>
-          <EmptyState icon={Film} title="Todavía no hay grabaciones" text="Al terminar tu primer live, la grabación aparecerá aquí." />
+          <EmptyState
+            icon={Film}
+            title={t("Todavía no hay grabaciones", "Pas encore d'enregistrements")}
+            text={t("Al terminar tu primer live, la grabación aparecerá aquí.", "À la fin de votre premier live, l'enregistrement apparaîtra ici.")}
+          />
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {recordings.map((r) => {
-            const status = STATUS[r.status] ?? STATUS.ready;
+            const status = statusOf(r.status, t);
             const fileUrl = apiFileUrl(`/admin/recordings/${r.id}/file`);
             return (
               <Card key={r.id} className="flex flex-col gap-3">
@@ -64,7 +77,7 @@ export default function Recordings() {
                     <button
                       type="button"
                       onClick={() => setPlaying(null)}
-                      aria-label="Cerrar"
+                      aria-label={t("Cerrar", "Fermer")}
                       className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60"
                     >
                       <X className="h-4 w-4" />
@@ -84,13 +97,13 @@ export default function Recordings() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{r.liveTitle ?? "Live"}</p>
-                    <p className="text-xs text-site-gray">{formatDateTime(r.createdAt)}</p>
+                    <p className="text-xs text-site-gray">{formatDateTime(r.createdAt, locale)}</p>
                   </div>
                   <Badge tone={status.tone}>{status.label}</Badge>
                 </div>
 
                 <p className="text-xs text-site-gray">
-                  ⏱ {r.durationMs ? formatDuration(r.durationMs) : "—"} · 💾 {formatBytes(r.sizeBytes)} ·{" "}
+                  ⏱ {r.durationMs ? formatDuration(r.durationMs) : "—"} · 💾 {formatBytes(r.sizeBytes, locale)} ·{" "}
                   <span className="break-all">{r.filename}</span>
                 </p>
 
@@ -101,10 +114,10 @@ export default function Recordings() {
                       r.status === "ready" ? "" : "pointer-events-none opacity-50"
                     }`}
                   >
-                    <Download className="h-4 w-4" /> Descargar
+                    <Download className="h-4 w-4" /> {t("Descargar", "Télécharger")}
                   </a>
                   <Button variant="ghost" icon={Trash2} onClick={() => remove(r)} disabled={r.status === "recording"}>
-                    Eliminar
+                    {t("Eliminar", "Supprimer")}
                   </Button>
                 </div>
               </Card>

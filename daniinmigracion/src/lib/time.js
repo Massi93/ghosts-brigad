@@ -42,17 +42,17 @@ export function formatLiveDate(iso, locale = "es") {
 }
 
 /** Date + heure courte : « 19/10/2026 18:42 ». */
-export function formatDateTime(iso) {
+export function formatDateTime(iso, locale = "es") {
   if (!iso) return "—";
-  return new Intl.DateTimeFormat("es", { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
+  return new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
 }
 
 /** Taille lisible : « 12,4 MB ». */
-export function formatBytes(bytes) {
+export function formatBytes(bytes, locale = "es") {
   if (!bytes) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
+  const units = locale === "fr" ? ["o", "Ko", "Mo", "Go"] : ["B", "KB", "MB", "GB"];
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  return `${(bytes / 1024 ** i).toLocaleString("es", { maximumFractionDigits: 1 })} ${units[i]}`;
+  return `${(bytes / 1024 ** i).toLocaleString(locale, { maximumFractionDigits: 1 })} ${units[i]}`;
 }
 
 /**

@@ -10,6 +10,8 @@
  * Protocole : `[événement, données, idAccusé?]` (voir worker/live/sockets.js).
  */
 
+import { translateServerMessage } from "./serverMessages";
+
 const CLOSE_SERVER_DISCONNECT = 4000; // déconnexion voulue par le serveur
 const CLOSE_UNAUTHORIZED = 4401; // session absente à la connexion
 const PING_MS = 20_000;
@@ -249,9 +251,9 @@ export function createCockpitSocket() {
 export function emitWithAck(socket, event, payload) {
   return new Promise((resolve, reject) => {
     socket.timeout(10_000).emit(event, payload, (err, response) => {
-      if (err) return reject(new Error("El servidor no responde"));
+      if (err) return reject(new Error(translateServerMessage("El servidor no responde")));
       if (response?.error) {
-        const error = new Error(response.error);
+        const error = new Error(translateServerMessage(response.error));
         error.code = response.code; // ex. "ended", "busy"
         return reject(error);
       }

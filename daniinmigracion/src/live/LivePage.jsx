@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Eye, Heart, Loader2, Maximize2, Radio, VolumeX, WifiOff } from "lucide-react";
+import { ArrowLeft, Expand, Eye, Heart, Loader2, Maximize2, Shrink, VolumeX, WifiOff } from "lucide-react";
 import HeartsLayer from "./Hearts";
+import Lobby from "./Lobby";
 import { useViewerStream } from "./useViewerStream";
 import { getPublicSocket } from "../lib/socket";
 import { livePhase, useLiveStatus } from "../lib/liveStatus";
-import { formatCountdown, formatDuration, formatLiveDate, splitDuration, useNow } from "../lib/time";
+import { formatDuration, useNow } from "../lib/time";
 import { intlLocale, liveTexts, pageLang } from "./i18n";
 
 const HEART_FLUSH_MS = 200;
@@ -19,9 +20,40 @@ const T = liveTexts(LANG);
 const compact = (n) => new Intl.NumberFormat(LOCALE, { notation: "compact", maximumFractionDigits: 1 }).format(n);
 
 /**
- * Page de visionnage du live (/live), plein écran, responsive.
- * Le viewer regarde seulement : ni chat, ni commentaires, ni micro.
- * Seule interaction : envoyer des cœurs (bouton ou double-tap sur la vidéo).
+ * Garde l'écran du téléphone allumé pendant le live (API Wake Lock :
+ * iPhone iOS 16.4+, Android). Relancé quand la page redevient visible.
+ */
+function useWakeLock(active) {
+  useEffect(() => {
+    if (!active || !("wakeLock" in navigator)) return undefined;
+    let lock = null;
+    let disposed = false;
+    const request = async () => {
+      try {
+        if (document.visibilityState === "visible" && !disposed) lock = await navigator.wakeLock.request("screen");
+      } catch {
+        // refusé (économie d'énergie…) : sans conséquence
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") request();
+    };
+    request();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      disposed = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      lock?.release().catch(() => {});
+    };
+  }, [active]);
+}
+
+/**
+ * Page du live (/live), pensée d'abord pour le téléphone.
+ *  - Avant / après le live : page claire aux couleurs du site (Lobby) avec
+ *    compte à rebours, ajout à l'agenda et inscription aux rappels.
+ *  - Pendant le live : vidéo plein écran. Le viewer regarde seulement (ni chat,
+ *    ni commentaires, ni micro) ; il peut envoyer des cœurs (bouton ou double-tap).
  */
 export default function LivePage() {
   const socket = getPublicSocket();
@@ -32,6 +64,7 @@ export default function LivePage() {
   const [ended, setEnded] = useState(false);
   const [stats, setStats] = useState({ viewers: 0, hearts: 0 });
   const [needsSound, setNeedsSound] = useState(false);
+  const [fill, setFill] = useState(false); // vidéo recadrée pour remplir l'écran
 
   const joinEnabled = loaded && phase !== "none" && !ended;
   const { stream, state } = useViewerStream(socket, joinEnabled);
@@ -43,11 +76,28 @@ export default function LivePage() {
   const pendingHearts = useRef(0);
   const lastTap = useRef(0);
 
+  const isLive = phase === "live" && !ended;
+  const showStage = isLive && state !== "full";
+
   useEffect(() => {
     document.title = "🔴 Live · Dani Inmigración";
     document.documentElement.lang = LANG;
     document.documentElement.dir = LANG === "ar" ? "rtl" : "ltr";
   }, []);
+
+  // Couleur de la barre du navigateur : claire hors live, noire pendant la vidéo.
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content = showStage ? "#000000" : "#ffffff";
+    document.body.style.background = showStage ? "#000" : "#f6f8fb";
+  }, [showStage]);
+
+  useWakeLock(showStage && Boolean(stream));
 
   // Statistiques, cœurs des autres viewers et fin du live.
   useEffect(() => {
@@ -90,6 +140,7 @@ export default function LivePage() {
   }, [socket]);
 
   // Branchement du flux sur la vidéo (+ copie floutée en arrière-plan).
+  // Relancé quand la scène vidéo apparaît (début du live) ou que le flux change.
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -98,15 +149,13 @@ export default function LivePage() {
     if (!stream) return;
     video.muted = false;
     video.play().catch(() => {
-      // Lecture automatique avec son bloquée par le navigateur : on démarre en muet.
+      // Son bloqué par le navigateur (iPhone…) : lecture en muet, un toucher active le son.
       video.muted = true;
       setNeedsSound(true);
       video.play().catch(() => {});
     });
     backdropRef.current?.play().catch(() => {});
-  }, [stream]);
-
-  const isLive = phase === "live" && !ended;
+  }, [stream, showStage]);
 
   const sendHeart = useCallback(() => {
     if (!isLive) return;
@@ -116,9 +165,21 @@ export default function LivePage() {
     if (navigator.vibrate) navigator.vibrate(8);
   }, [isLive]);
 
-  // Double-tap sur la vidéo : gros cœur à l'endroit touché.
+  const enableSound = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = false;
+    video.play().catch(() => {});
+    setNeedsSound(false);
+  };
+
+  // Toucher la vidéo : le premier active le son, puis double-tap = gros cœur.
   const onStageTap = (e) => {
     if (!isLive) return;
+    if (needsSound) {
+      enableSound();
+      return;
+    }
     const t = Date.now();
     if (t - lastTap.current < DOUBLE_TAP_MS) {
       const rect = stageRef.current.getBoundingClientRect();
@@ -130,138 +191,157 @@ export default function LivePage() {
     }
   };
 
-  const enableSound = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = false;
-    video.play().catch(() => {});
-    setNeedsSound(false);
-  };
-
   const canFullscreen = typeof document !== "undefined" && document.fullscreenEnabled;
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else stageRef.current?.requestFullscreen?.().catch(() => {});
   };
 
+  if (!loaded) {
+    return (
+      <div className="site-theme grid min-h-[100dvh] place-items-center bg-site-bg">
+        <Loader2 className="h-8 w-8 animate-spin text-site-red" />
+      </div>
+    );
+  }
+
+  if (!showStage) {
+    return (
+      <Lobby
+        live={live}
+        phase={phase}
+        remaining={remaining}
+        mode={ended ? "ended" : state === "full" ? "full" : "waiting"}
+        T={T}
+        lang={LANG}
+        locale={LOCALE}
+      />
+    );
+  }
+
   const startedAt = live?.startedAt ? Date.parse(live.startedAt) : null;
+  const stop = (e) => e.stopPropagation();
 
   return (
     <div
       ref={stageRef}
       onPointerUp={onStageTap}
-      className="fixed inset-0 h-[100dvh] w-full touch-manipulation select-none overflow-hidden bg-black text-white"
+      className="fixed inset-0 h-[100dvh] w-full touch-manipulation select-none overflow-hidden bg-black font-['Inter',ui-sans-serif,system-ui,sans-serif] text-white [-webkit-touch-callout:none]"
     >
-      {/* Vidéo : copie floutée plein cadre derrière, image complète devant */}
+      {/* Vidéo : copie floutée plein cadre derrière (mode « ajusté »), image devant */}
       <video
         ref={backdropRef}
         muted
         playsInline
         autoPlay
         aria-hidden="true"
-        className={`absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl ${stream && isLive ? "" : "hidden"}`}
+        className={`absolute inset-0 h-full w-full scale-110 object-cover opacity-50 blur-xl ${stream && !fill ? "" : "hidden"}`}
       />
       <video
         ref={videoRef}
         playsInline
         autoPlay
-        className={`absolute inset-0 h-full w-full object-contain ${stream && isLive ? "" : "hidden"}`}
+        className={`absolute inset-0 h-full w-full ${fill ? "object-cover" : "object-contain"} ${stream ? "" : "hidden"}`}
       />
 
       {/* Dégradés pour la lisibilité des infos */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/70 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/70 to-transparent" />
 
-      {/* États sans vidéo (attente, fin, aucun live…) */}
-      {!(stream && isLive) && (
-        <StatusScreen
-          loaded={loaded}
-          phase={phase}
-          ended={ended}
-          state={state}
-          live={live}
-          remaining={remaining}
-        />
+      {/* Connexion à la vidéo en cours */}
+      {!stream && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-[radial-gradient(ellipse_at_center,#2a1218,#000)] px-8 text-center">
+          <Loader2 className="h-9 w-9 animate-spin text-white/80" />
+          <p className="text-sm text-white/80">{live?.interrupted ? T.waitingDani : T.connecting}</p>
+        </div>
       )}
 
       {/* Barre du haut */}
-      <header className="absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+      <header className="absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="flex min-w-0 items-center gap-3">
           <a
             href="/"
-            onPointerUp={(e) => e.stopPropagation()}
+            onPointerUp={stop}
             aria-label={T.back}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/40 backdrop-blur active:scale-90"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-black/40 backdrop-blur active:scale-90"
           >
             <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
           </a>
           <div className="min-w-0">
-            <p className="truncate font-display text-sm font-bold">{live?.title || T.defaultTitle}</p>
+            <p className="truncate text-sm font-bold">{live?.title || T.defaultTitle}</p>
             <p className="text-xs text-white/60">Dani Inmigración</p>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          {isLive && (
-            <>
-              <span className="flex items-center gap-1.5 rounded-md bg-red-500 px-2 py-1 text-xs font-extrabold tracking-wider">
-                <span className="live-blink">LIVE</span>
-                {startedAt && <span className="font-mono font-semibold tabular-nums">{formatDuration(now - startedAt)}</span>}
-              </span>
-              <span className="flex items-center gap-1 rounded-md bg-black/40 px-2 py-1 text-xs font-semibold backdrop-blur">
-                <Eye className="h-3.5 w-3.5" /> {compact(stats.viewers)}
-              </span>
-            </>
-          )}
-          {canFullscreen && (
-            <button
-              type="button"
-              onPointerUp={(e) => e.stopPropagation()}
-              onClick={toggleFullscreen}
-              aria-label={T.fullscreen}
-              className="hidden h-8 w-8 place-items-center rounded-md bg-black/40 backdrop-blur sm:grid"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </button>
-          )}
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 rounded-md bg-[#c60b1e] px-2 py-1 text-xs font-extrabold tracking-wider">
+              <span className="live-blink">LIVE</span>
+              {startedAt && <span className="font-mono font-semibold tabular-nums">{formatDuration(now - startedAt)}</span>}
+            </span>
+            <span className="flex items-center gap-1 rounded-md bg-black/40 px-2 py-1 text-xs font-semibold backdrop-blur">
+              <Eye className="h-3.5 w-3.5" /> {compact(stats.viewers)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {stream && (
+              <button
+                type="button"
+                onPointerUp={stop}
+                onClick={() => setFill((v) => !v)}
+                aria-label={fill ? T.fit : T.fill}
+                title={fill ? T.fit : T.fill}
+                className="grid h-9 w-9 place-items-center rounded-full bg-black/40 backdrop-blur active:scale-90"
+              >
+                {fill ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+              </button>
+            )}
+            {canFullscreen && (
+              <button
+                type="button"
+                onPointerUp={stop}
+                onClick={toggleFullscreen}
+                aria-label={T.fullscreen}
+                className="hidden h-9 w-9 place-items-center rounded-full bg-black/40 backdrop-blur sm:grid"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Reconnexion / son */}
-      {isLive && live?.interrupted && (
-        <Notice icon={WifiOff} text={T.reconnecting} />
-      )}
-      {isLive && !live?.interrupted && stream && needsSound && (
+      {live?.interrupted && stream && <Notice icon={WifiOff} text={T.reconnecting} />}
+      {!live?.interrupted && stream && needsSound && (
         <button
           type="button"
-          onPointerUp={(e) => e.stopPropagation()}
+          onPointerUp={stop}
           onClick={enableSound}
-          className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-ink shadow-lg active:scale-95"
+          className="absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-white px-5 py-3 text-sm font-bold text-[#0f1020] shadow-lg active:scale-95"
         >
-          <VolumeX className="h-4 w-4" /> {T.enableSound}
+          <VolumeX className="h-5 w-5 text-[#c60b1e]" /> {T.tapSound}
         </button>
       )}
 
       <HeartsLayer ref={heartsRef} />
 
       {/* Bouton « me gusta » */}
-      {isLive && (
-        <div className="absolute bottom-0 right-0 z-30 flex flex-col items-center gap-1 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-          <button
-            type="button"
-            onPointerUp={(e) => e.stopPropagation()}
-            onClick={sendHeart}
-            aria-label={T.sendHeart}
-            className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-pink-400 to-red-500 shadow-[0_10px_30px_-6px_rgba(255,45,85,0.8)] transition active:scale-90"
-          >
-            <Heart className="h-8 w-8 fill-white text-white" />
-          </button>
-          <span className="text-xs font-bold tabular-nums drop-shadow">{compact(stats.hearts)}</span>
-        </div>
-      )}
+      <div className="absolute bottom-0 right-0 z-30 flex flex-col items-center gap-1 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <button
+          type="button"
+          onPointerUp={stop}
+          onClick={sendHeart}
+          aria-label={T.sendHeart}
+          className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-pink-400 to-red-500 shadow-[0_10px_30px_-6px_rgba(255,45,85,0.8)] transition active:scale-90"
+        >
+          <Heart className="h-8 w-8 fill-white text-white" />
+        </button>
+        <span className="text-xs font-bold tabular-nums drop-shadow">{compact(stats.hearts)}</span>
+      </div>
 
-      {isLive && stream && (
-        <p className="pointer-events-none absolute bottom-0 left-0 z-30 p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-xs text-white/60">
+      {stream && !needsSound && (
+        <p className="pointer-events-none absolute bottom-0 left-0 z-30 max-w-[60%] p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-xs text-white/70">
           {T.doubleTap}
         </p>
       )}
@@ -271,77 +351,8 @@ export default function LivePage() {
 
 function Notice({ icon: Icon, text }) {
   return (
-    <div className="absolute left-1/2 top-24 z-30 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-black/60 px-4 py-2 text-sm backdrop-blur">
-      <Icon className="h-4 w-4 text-gold-400" /> {text}
-    </div>
-  );
-}
-
-/** Écran central quand la vidéo n'est pas (encore) affichée. */
-function StatusScreen({ loaded, phase, ended, state, live, remaining }) {
-  let content;
-
-  if (!loaded) {
-    content = <Loader2 className="h-8 w-8 animate-spin text-white/70" />;
-  } else if (ended) {
-    content = (
-      <>
-        <p className="text-5xl">💙</p>
-        <h1 className="mt-4 font-display text-2xl font-extrabold">{T.endedTitle}</h1>
-        <p className="mt-2 text-sm text-white/60">{T.endedText}</p>
-        <a href="/#proximo-live" className="btn-primary mt-6">{T.notifyNext}</a>
-      </>
-    );
-  } else if (state === "full") {
-    content = (
-      <>
-        <h1 className="font-display text-2xl font-extrabold">{T.fullTitle}</h1>
-        <p className="mt-2 text-sm text-white/60">{T.fullText}</p>
-      </>
-    );
-  } else if (phase === "none") {
-    content = (
-      <>
-        <Radio className="h-10 w-10 text-white/40" />
-        <h1 className="mt-4 font-display text-2xl font-extrabold">{T.noneTitle}</h1>
-        <p className="mt-2 text-sm text-white/60">{T.noneText}</p>
-        <a href="/#proximo-live" className="btn-primary mt-6">{T.register}</a>
-      </>
-    );
-  } else if (phase === "live") {
-    content = (
-      <>
-        <Loader2 className="h-8 w-8 animate-spin text-white/70" />
-        <p className="mt-4 text-sm text-white/70">
-          {live?.interrupted ? T.waitingDani : T.connecting}
-        </p>
-      </>
-    );
-  } else {
-    // Programmé : salle d'attente avec compte à rebours.
-    const { days, hours } = splitDuration(remaining);
-    content = (
-      <>
-        <span className="flex items-center gap-2 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1 text-xs font-bold text-red-300">
-          <span className="live-blink">●</span> {T.soon}
-        </span>
-        <h1 className="mt-4 font-display text-2xl font-extrabold">{live.title}</h1>
-        <p className="mt-1 text-sm text-white/60">{formatLiveDate(live.scheduledAt, LOCALE)}</p>
-        {phase === "ready" ? (
-          <p className="mt-6 text-sm text-white/80">{T.daniSoon}</p>
-        ) : (
-          <p className="mt-6 font-mono text-5xl font-bold tabular-nums">
-            {days || hours ? `${days ? `${days}d ` : ""}${hours}h ${String(Math.floor((remaining % 3600_000) / 60_000)).padStart(2, "0")}m` : formatCountdown(remaining)}
-          </p>
-        )}
-        <p className="mt-3 text-xs text-white/40">{T.autoRefresh}</p>
-      </>
-    );
-  }
-
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,#16224a,#0b1220)] px-8 text-center">
-      {content}
+    <div className="absolute left-1/2 top-28 z-30 flex max-w-[90%] -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm backdrop-blur">
+      <Icon className="h-4 w-4 shrink-0 text-[#f1bf00]" /> <span className="truncate">{text}</span>
     </div>
   );
 }

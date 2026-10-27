@@ -6,6 +6,7 @@
  * À l'arrêt, le serveur finalise le fichier (durée écrite dans l'en-tête WebM).
  */
 import { api, ApiError } from "../lib/api";
+import { translateServerMessage as tr } from "../lib/serverMessages";
 
 const TIMESLICE_MS = 2000;
 const MAX_RETRY_DELAY_MS = 5000;
@@ -57,7 +58,7 @@ export class ChunkedRecorder {
   /** Crée le fichier côté serveur et démarre l'enregistrement. */
   async start() {
     const mimeType = pickRecordingMime();
-    if (!mimeType) throw new Error("Este navegador no permite grabar el live");
+    if (!mimeType) throw new Error(tr("Este navegador no permite grabar el live"));
 
     const { id } = await api("/admin/recordings", {
       method: "POST",
@@ -75,7 +76,7 @@ export class ChunkedRecorder {
     };
     this.recorder.onerror = (event) => {
       this.status = "error";
-      this.emit({ error: event.error?.message || "Error de grabación" });
+      this.emit({ error: event.error?.message || tr("Error de grabación") });
     };
     this.startedAt = performance.now();
     this.recorder.start(TIMESLICE_MS);
@@ -121,7 +122,7 @@ export class ChunkedRecorder {
         }
         // Réseau coupé ou serveur indisponible : on réessaie tant que le live continue.
         if (this.stopping && attempt >= RETRIES_WHEN_STOPPING) {
-          this.fail("No se pudo subir el final de la grabación");
+          this.fail(tr("No se pudo subir el final de la grabación"));
           return;
         }
         if (this.status === "recording") {

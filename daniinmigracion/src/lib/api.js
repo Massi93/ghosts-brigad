@@ -3,6 +3,8 @@
  * Les cookies de session sont envoyés automatiquement (même origine).
  */
 
+import { translateServerMessage } from "./serverMessages";
+
 const API_BASE = "/api/live";
 
 export class ApiError extends Error {
@@ -45,13 +47,20 @@ export async function api(path, { method = "GET", body, signal } = {}) {
     init.headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(`${API_BASE}${path}`, init);
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, init);
+  } catch (err) {
+    if (err?.name === "AbortError") throw err;
+    // Réseau coupé : erreur lisible (status 0 = nouvel essai possible).
+    throw new ApiError(0, translateServerMessage("Error de conexión"), "network");
+  }
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const data = isJson ? await response.json().catch(() => ({})) : {};
 
   if (!response.ok) {
     if (response.status === 401 && path.startsWith("/admin")) unauthorizedHandler?.();
-    throw new ApiError(response.status, data.error || "Error de conexión", data.code);
+    throw new ApiError(response.status, translateServerMessage(data.error || "Error de conexión"), data.code);
   }
   return data;
 }
