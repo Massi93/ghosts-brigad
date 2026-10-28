@@ -71,7 +71,7 @@ function layout({ lang, preheader, bodyHtml, ctaLabel, ctaUrl, unsubscribeToken 
   return `<!doctype html>
 <html lang="${lang}" dir="${dir}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;background:#f6f8fb;font-family:Inter,Helvetica,Arial,sans-serif;color:#52525b" dir="${dir}">
-  <span style="display:none;opacity:0;height:0;overflow:hidden">${escapeHtml(preheader)}</span>
+  <span style="display:none;opacity:0;height:0;max-height:0;overflow:hidden;mso-hide:all">${escapeHtml(preheader)}${"&#847;&zwnj;&nbsp;".repeat(40)}</span>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f8fb;padding:24px 12px">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:20px;border:1px solid #e9ecf2;overflow:hidden">
@@ -183,9 +183,11 @@ export function manualEmail(registration, { subject, message }) {
     .split(/\n{2,}/)
     .map((para) => p(escapeHtml(para).replace(/\n/g, "<br>")))
     .join("");
+  // Aperçu dans la liste des e-mails (Gmail…) : le début du message, pas l'en-tête.
+  const preview = personalized.replace(/\s+/g, " ").trim().slice(0, 140);
   const html = layout({
     lang,
-    preheader: subject,
+    preheader: preview || subject,
     bodyHtml: paragraphs,
     ctaLabel: T[lang].goLivePage,
     ctaUrl: liveUrl(lang),
