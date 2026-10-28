@@ -19,8 +19,10 @@ cloud de l'EA (`.ex5` prêt à l'emploi).
 - **Note de reprise** (état des lieux, questions ouvertes, plan en 6 étapes) :
   [`ghostsbrigad-mt5/REPRISE-VERSION-TEST.md`](https://github.com/Massi93/ghosts-brigad/blob/feature/version-test/ghostsbrigad-mt5/REPRISE-VERSION-TEST.md)
   sur cette branche.
-- **Pour relancer l'assistant** : « Reprends le travail décrit dans
-  `ghostsbrigad-mt5/REPRISE-VERSION-TEST.md` (branche `feature/version-test`) ».
+- **Pour relancer l'assistant** : dire « **récupérer BOT MT5** » (le fichier
+  `CLAUDE.md` à la racine lui indique quoi faire), ou « Reprends le travail
+  décrit dans `ghostsbrigad-mt5/REPRISE-VERSION-TEST.md` (branche
+  `feature/version-test`) ».
 - **Compilation de référence** : workflow GitHub Actions « Compile EA »
   (runner Windows + MetaEditor) ; son log affiche le nombre d'erreurs et de
   warnings.
