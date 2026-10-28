@@ -76,6 +76,14 @@ async function checkBrevoKey(key, from) {
   }
   if (probe.status === 401 || probe.status === 403) {
     const data = await probe.json().catch(() => ({}));
+    if (/unrecogni[sz]ed IP|authori[sz]ed_ips/i.test(data.message || "")) {
+      // Les serveurs Cloudflare changent d'adresse IP : le blocage par IP doit être désactivé.
+      fail(
+        "Brevo bloque les adresses IP inconnues (la clé est bonne).\n" +
+          "Ouvre https://app.brevo.com/security/authorised_ips → ligne « API keys » → « Deactivate for API keys »,\n" +
+          "puis relance npm run mail:setup. (Autoriser une seule IP ne suffit pas : Cloudflare en utilise beaucoup.)"
+      );
+    }
     fail(
       `Brevo refuse cette clé pour l'envoi d'e-mails : « ${data.message || probe.status} ».\n` +
         "Colle la NOUVELLE clé (Brevo → SMTP et API → Clés API), avec la permission « Transactional email »."
