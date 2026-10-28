@@ -12,6 +12,12 @@ export function mailErrorHint(error, t) {
       "Brevo bloque les adresses IP inconnues : Brevo → Sécurité → Adresses IP autorisées → désactiver le blocage (Cloudflare utilise de nombreuses IP)."
     );
   }
+  if (/not authori[sz]ed for resource|permission/i.test(e)) {
+    return t(
+      "La clave API no tiene el permiso « Emails transaccionales »: en Brevo → SMTP y API → Claves API, crea una clave con ese permiso (o acceso completo) y ejecuta npm run mail:setup.",
+      "La clé API n'a pas la permission « E-mails transactionnels » : Brevo → SMTP et API → Clés API → créez une clé avec cette permission (ou accès complet), puis relancez npm run mail:setup."
+    );
+  }
   if (/key not found|api[- ]?key|unauthori[sz]ed|invalid.*key/i.test(e)) {
     return t(
       "Clave de Brevo inválida o borrada: crea una nueva clave API y ejecuta otra vez npm run mail:setup.",
