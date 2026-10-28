@@ -3,7 +3,7 @@ name: Compile EA
 on:
   workflow_dispatch:
   push:
-    branches: [BrigadBot]
+    branches: [main, BrigadBot]
     paths:
       - "ghostsbrigad-mt5/Experts/**/*.mq5"
       - "ghostsbrigad-mt5/Experts/**/*.mqh"

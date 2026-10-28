@@ -8,7 +8,7 @@ Durée : ~15 minutes (+ Sentinel en option, ~15 minutes de plus).
 ## Étape 1 — Télécharger le bot depuis GitHub
 
 1. Va sur ton dépôt GitHub → https://github.com/Massi93/ghosts-brigad
-2. En haut à gauche, clique sur le sélecteur de branche et choisis **`BrigadBot`**
+2. Reste sur la branche **`main`** (branche par défaut ; `BrigadBot` est l'ancien nom de la branche du bot)
 3. Bouton vert **Code** → **Download ZIP**
 4. Décompresse le ZIP sur ton PC
 
