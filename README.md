@@ -131,7 +131,9 @@ Ensuite, ouvrir https://www.daniinmigracion.com/cockpit (identifiant `dani` + le
 
 ### Configurer l'email
 
-Par défaut (`MAIL_MODE=console`), **aucun email réel n'est envoyé**. Les emails apparaissent dans le cockpit (Sitio → « Correos de prueba ») et dans les logs (`npx wrangler tail`). C'est idéal pour tester.
+En ligne, le Live envoie les emails par **Brevo** depuis `live@daniinmigracion.com` (`MAIL_MODE=brevo` dans `wrangler.jsonc`, clé API dans le secret Cloudflare `MAIL_API_KEY`).
+
+En local (`.dev.vars` : `MAIL_MODE=console`), **aucun email réel n'est envoyé** : ils apparaissent dans le cockpit (Sitio → « Correos de prueba ») et dans les logs. C'est idéal pour tester.
 
 Pour l'envoi réel, une commande guidée, dans le dossier `daniinmigracion/` :
 

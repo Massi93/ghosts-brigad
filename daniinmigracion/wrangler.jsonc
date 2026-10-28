@@ -36,7 +36,7 @@
     "PUBLIC_URL": "https://www.daniinmigracion.com",
     "ADMIN_USERNAME": "dani",
     "SITE_TIMEZONE": "Europe/Madrid",
-    "MAIL_MODE": "console",
+    "MAIL_MODE": "brevo",
     "MAIL_FROM": "Dani Inmigración <live@daniinmigracion.com>",
     "ICE_SERVERS": "stun:stun.cloudflare.com:3478,stun:stun.l.google.com:19302",
     "MAX_VIEWERS": "50",
