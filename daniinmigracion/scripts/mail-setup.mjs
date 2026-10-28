@@ -47,6 +47,14 @@ async function ask(question, { hidden = false, fallback = "" } = {}) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
 
+/** Nettoie une clé collée : espaces, guillemets, marqueurs de collage du terminal. */
+function cleanKey(value) {
+  return value
+    .replace(/\x1b\[20[01]~/g, "")
+    .replace(/\s+/g, "")
+    .replace(/^["'`]+|["'`]+$/g, "");
+}
+
 function fail(message) {
   console.error(`\n✖ ${message}\nRien n'a été modifié.`);
   process.exit(1);
@@ -91,13 +99,32 @@ if (flags.has("--console")) {
   if (choice === "2") {
     const from = await ask("Adresse d'expédition vérifiée chez Brevo : ");
     if (!EMAIL_RE.test(from)) fail("Adresse invalide.");
-    const key = await ask("Clé API Brevo (xkeysib-…, masquée) : ", { hidden: true });
-    if (!key.startsWith("xkeysib-")) fail("La clé API Brevo commence par « xkeysib- ».");
-    text = setVar(text, "MAIL_MODE", "brevo");
+    const key = cleanKey(await ask("Clé Brevo (API « xkeysib-… » ou SMTP « xsmtpsib-… », masquée) : ", { hidden: true }));
     text = setVar(text, "MAIL_FROM", `${SENDER_NAME} <${from}>`);
-    for (const name of ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE"]) text = removeVar(text, name);
-    secret("MAIL_API_KEY", key);
-    summary = `Brevo, expéditeur ${from}.`;
+    if (key.startsWith("xkeysib-")) {
+      // Clé API (onglet « Clés API ») : envoi par l'API HTTP de Brevo.
+      text = setVar(text, "MAIL_MODE", "brevo");
+      for (const name of ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE"]) text = removeVar(text, name);
+      secret("MAIL_API_KEY", key);
+      summary = `Brevo (API), expéditeur ${from}.`;
+    } else if (key.startsWith("xsmtpsib-")) {
+      // Clé SMTP (onglet « SMTP ») : il faut aussi l'identifiant SMTP affiché sur la même page.
+      console.log("\nC'est une clé SMTP. Sur la même page Brevo (onglet SMTP), copie l'« Identifiant » (ex. 9a1b2c001@smtp-brevo.com).");
+      const login = await ask("Identifiant SMTP Brevo : ");
+      if (!EMAIL_RE.test(login)) fail("L'identifiant SMTP Brevo ressemble à une adresse email (…@smtp-brevo.com).");
+      text = setVar(text, "MAIL_MODE", "smtp");
+      text = setVar(text, "SMTP_HOST", "smtp-relay.brevo.com");
+      text = setVar(text, "SMTP_PORT", "587");
+      text = setVar(text, "SMTP_SECURE", "false");
+      secret("SMTP_USER", login);
+      secret("SMTP_PASS", key);
+      summary = `Brevo (SMTP), expéditeur ${from}.`;
+    } else {
+      fail(
+        `Clé non reconnue (elle commence par « ${key.slice(0, 9)}… »).\n` +
+          "Brevo → SMTP et API → onglet « Clés API » → « Générer une nouvelle clé API » : la clé commence par « xkeysib- »."
+      );
+    }
   } else {
     console.log("\nMot de passe d'application Google : https://myaccount.google.com/apppasswords");
     console.log("(il faut que la validation en deux étapes soit activée sur le compte Gmail)\n");
