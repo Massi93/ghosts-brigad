@@ -46,6 +46,11 @@ function liveUrl(lang = "es") {
   return `${config.publicUrl}/live?lang=${lang}`;
 }
 
+/** Logo rond de Dani Inmigración (public/logo-dani.jpg, servi par le Live). */
+function logoUrl() {
+  return `${config.publicUrl}/live/logo-dani.jpg`;
+}
+
 export function unsubscribeUrl(token) {
   return `${config.publicUrl}/api/live/public/unsubscribe?token=${encodeURIComponent(token)}`;
 }
@@ -71,9 +76,16 @@ function layout({ lang, preheader, bodyHtml, ctaLabel, ctaUrl, unsubscribeToken 
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:20px;border:1px solid #e9ecf2;overflow:hidden">
         <tr><td style="height:4px;background:#c60b1e;background:linear-gradient(90deg,#c60b1e,#f1bf00)"></td></tr>
-        <tr><td style="padding:26px 28px 0;text-align:${align}">
-          <p style="margin:0;font-size:18px;font-weight:800;color:#0f1020">Dani Inmigración
-            <span style="display:inline-block;margin:0 6px;background:#c60b1e;color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;vertical-align:middle">LIVE</span></p>
+        <tr><td style="padding:24px 28px 0;text-align:${align}">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:collapse"><tr>
+            <td style="padding:0;vertical-align:middle">
+              <img src="${escapeHtml(logoUrl())}" width="56" height="56" alt="Dani Inmigración" style="display:block;width:56px;height:56px;border:0;border-radius:50%;box-shadow:0 3px 12px rgba(0,0,0,.12)">
+            </td>
+            <td style="padding:0 12px;vertical-align:middle">
+              <p style="margin:0;font-size:18px;font-weight:800;line-height:1.25;color:#0f1020">Dani Inmigración
+                <span style="display:inline-block;margin:0 4px;background:#c60b1e;color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;vertical-align:middle">LIVE</span></p>
+            </td>
+          </tr></table>
         </td></tr>
         <tr><td style="padding:18px 28px 28px;font-size:15px;line-height:1.65;color:#52525b;text-align:${align}">
           ${bodyHtml}
@@ -225,6 +237,7 @@ export function standalonePage(lang, bodyHtml) {
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(t.pageTitle)}</title></head>
 <body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f8fb;color:#52525b;font-family:Inter,system-ui,sans-serif;padding:24px;box-sizing:border-box">
 <main style="max-width:440px;width:100%;background:#fff;border:1px solid #e9ecf2;border-radius:22px;padding:32px 28px;text-align:center;box-shadow:0 24px 64px rgba(15,16,32,.08)">
+<img src="/live/logo-dani.jpg" width="72" height="72" alt="" style="display:block;margin:0 auto 12px;border-radius:50%;box-shadow:0 4px 16px rgba(0,0,0,.12)">
 <p style="margin:0 0 18px;font-size:20px;font-weight:800;color:#0f1020">Dani Inmigración <span style="background:#c60b1e;color:#fff;font-size:11px;padding:3px 8px;border-radius:999px;vertical-align:middle">LIVE</span></p>
 ${bodyHtml}<p style="margin-top:24px"><a href="/" style="color:#c60b1e;font-weight:600">${escapeHtml(t.backToSite)}</a></p></main></body></html>`;
 }
