@@ -3,6 +3,7 @@ import { ExternalLink, Eye, EyeOff, Inbox, KeyRound, Mail, Save, Send, ShieldAle
 import { api, apiFileUrl } from "../../lib/api";
 import { Button, Card, Field, MailModeBadge, SectionTitle, inputClass, useToast } from "../ui";
 import { formatDateTime } from "../../lib/time";
+import { mailErrorHint } from "../../lib/mailHints";
 import { useLang } from "../i18n";
 
 /** Réglages du site (rubrique « Próximo live ») et vérification de l'email. */
@@ -15,6 +16,7 @@ export default function SiteSettings() {
   const [defaultPassword, setDefaultPassword] = useState(false);
   const [testTo, setTestTo] = useState("");
   const [testing, setTesting] = useState(false);
+  const [testError, setTestError] = useState(null); // dernière erreur d'envoi (cause du fournisseur)
   const [outbox, setOutbox] = useState([]);
 
   const loadOutbox = () =>
@@ -62,9 +64,12 @@ export default function SiteSettings() {
               "Mode console : l'e-mail apparaît plus bas dans « E-mails de test » (rien n'est envoyé)"
             )
       );
+      setTestError(null);
       loadOutbox();
     } catch (err) {
-      toast(err.message, "error");
+      const hint = mailErrorHint(err.message, t);
+      toast(hint ? `${err.message} → ${hint}` : err.message, "error");
+      setTestError(err.message);
     } finally {
       setTesting(false);
     }
@@ -174,6 +179,12 @@ export default function SiteSettings() {
               <Button type="submit" icon={Send} loading={testing} variant="ghost">
                 {t("Enviar prueba", "Envoyer un test")}
               </Button>
+              {testError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-800">
+                  <p className="break-words font-mono">{testError}</p>
+                  {mailErrorHint(testError, t) && <p className="mt-1 font-semibold">→ {mailErrorHint(testError, t)}</p>}
+                </div>
+              )}
               <p className="text-xs text-site-gray">
                 {t(
                   "Para el envío real (Gmail de Dani o Brevo), en el ordenador: npm run mail:setup (ver README, « Configurar el email »).",

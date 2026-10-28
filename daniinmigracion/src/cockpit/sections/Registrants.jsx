@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Clock, Download, Mail, Search, Send, Trash2, Users, XCircle } from "lucide-react";
 import { api, apiFileUrl } from "../../lib/api";
 import { formatDateTime, formatLiveDate } from "../../lib/time";
+import { mailErrorHint } from "../../lib/mailHints";
 import { useCockpit } from "../CockpitContext";
 import { useLang } from "../i18n";
 import { Badge, Button, Card, EmptyState, Field, SectionTitle, inputClass, useToast } from "../ui";
@@ -123,11 +124,15 @@ export default function Registrants() {
   const countOf = (entry) => {
     let sent = 0;
     let failed = 0;
+    const errors = new Set();
     for (const e of entry.progress.values()) {
       if (e.status === "sent") sent += 1;
-      else if (e.status === "failed") failed += 1;
+      else if (e.status === "failed") {
+        failed += 1;
+        if (e.error) errors.add(e.error);
+      }
     }
-    return { sent, failed, done: Boolean(entry.done) };
+    return { sent, failed, errors: [...errors].slice(0, 3), done: Boolean(entry.done) };
   };
 
   // Statuts d'envoi en temps réel.
@@ -462,6 +467,13 @@ export default function Registrants() {
                   </span>
                 )}
               </p>
+              {/* Cause des échecs, telle que donnée par le fournisseur d'emails, et la solution. */}
+              {(batch.errors ?? []).map((error) => (
+                <div key={error} className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-800">
+                  <p className="break-words font-mono">{error}</p>
+                  {mailErrorHint(error, t) && <p className="mt-1 font-semibold">→ {mailErrorHint(error, t)}</p>}
+                </div>
+              ))}
             </div>
           )}
         </Card>
