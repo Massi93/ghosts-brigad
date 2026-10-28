@@ -176,8 +176,8 @@ export default function SiteSettings() {
               </Button>
               <p className="text-xs text-site-gray">
                 {t(
-                  "El envío real se configura en Cloudflare (variables MAIL_MODE, SMTP… ver README, sección « Live »).",
-                  "L'envoi réel se configure chez Cloudflare (variables MAIL_MODE, SMTP… voir README, section « Live »)."
+                  "Para el envío real (Gmail de Dani o Brevo), en el ordenador: npm run mail:setup (ver README, « Configurar el email »).",
+                  "Pour l'envoi réel (Gmail de Dani ou Brevo), sur l'ordinateur : npm run mail:setup (voir README, « Configurer l'email »)."
                 )}
               </p>
             </form>

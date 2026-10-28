@@ -133,16 +133,22 @@ Ensuite, ouvrir https://www.daniinmigracion.com/cockpit (identifiant `dani` + le
 
 Par défaut (`MAIL_MODE=console`), **aucun email réel n'est envoyé**. Les emails apparaissent dans le cockpit (Sitio → « Correos de prueba ») et dans les logs (`npx wrangler tail`). C'est idéal pour tester.
 
-Pour l'envoi réel, choisir un fournisseur. Exemple **Brevo** (300 emails/jour gratuits) :
+Pour l'envoi réel, une commande guidée, dans le dossier `daniinmigracion/` :
 
-1. Brevo → Senders, Domains → ajouter `daniinmigracion.com` et créer les enregistrements DNS indiqués dans Cloudflare (DNS).
-2. Brevo → SMTP & API → API Keys → créer une clé.
-3. Dans `wrangler.jsonc`, remplacer `"MAIL_MODE": "console"` par `"MAIL_MODE": "brevo"`, puis :
-   ```bash
-   npx wrangler secret put MAIL_API_KEY   # coller la clé Brevo
-   npm run deploy
-   ```
-4. Vérifier avec le bouton **« Enviar prueba »** du cockpit.
+```bash
+npm run mail:setup              # choisir Gmail ou Brevo, répondre aux questions : tout est configuré et publié
+npm run mail:setup -- --console # revenir au mode test
+```
+
+**Gmail (le plus simple)** : les emails partent de l'adresse Gmail de Dani (environ 500 par jour au maximum).
+
+1. Sur le compte Google de Dani : **Sécurité → Validation en deux étapes** (à activer si ce n'est pas fait).
+2. Ouvrir https://myaccount.google.com/apppasswords, créer un mot de passe d'application nommé « Dani Live » et copier les **16 lettres**. Ce n'est pas le mot de passe du compte Gmail.
+3. `npm run mail:setup` → choix `1`, l'adresse Gmail, puis les 16 lettres (la saisie est masquée).
+
+**Brevo** (pour beaucoup d'inscrits, 300 emails/jour gratuits) : vérifier l'adresse d'expédition (ou le domaine `daniinmigracion.com`, enregistrements DNS dans Cloudflare), créer une clé API (SMTP & API → API Keys), puis `npm run mail:setup` → choix `2`.
+
+Vérifier ensuite dans le cockpit : **Sitio → « Enviar prueba »**. Tant que le mode test est actif, le cockpit l'indique en jaune dans « Notificar por email ».
 
 | `MAIL_MODE` | Variables |
 |---|---|

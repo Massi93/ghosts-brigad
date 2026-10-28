@@ -112,8 +112,19 @@ function deliverConsole({ to, subject, html, text }) {
   return { messageId: `console-${lastInsertRowid}` };
 }
 
-/** SMTP via les sockets TCP de Cloudflare (bibliothèque worker-mailer). */
-async function deliverSmtp({ to, subject, html, text, unsubscribeUrl }) {
+/*
+ * SMTP via les sockets TCP de Cloudflare (bibliothèque worker-mailer).
+ * Une seule connexion sert à tout un envoi (Gmail bloque les connexions répétées),
+ * puis elle est fermée après quelques secondes sans email.
+ */
+const SMTP_IDLE_MS = 5000;
+let smtp = null; // { mailer, timer }
+
+async function smtpConnection() {
+  if (smtp) {
+    clearTimeout(smtp.timer);
+    return smtp.mailer;
+  }
   const { host, port, secure, user, pass } = config.mail.smtp;
   if (!host) throw new Error("SMTP_HOST no configurado");
   const { WorkerMailer } = await import("worker-mailer");
@@ -127,18 +138,53 @@ async function deliverSmtp({ to, subject, html, text, unsubscribeUrl }) {
     socketTimeoutMs: 15_000,
     responseTimeoutMs: 15_000,
   });
-  try {
-    await mailer.send({
-      from: parseAddress(config.mail.from),
-      to: { email: to },
-      subject,
-      html,
-      text,
-      headers: unsubscribeHeaders(unsubscribeUrl),
-    });
-  } finally {
-    await mailer.close().catch(() => {});
+  smtp = { mailer, timer: null };
+  return mailer;
+}
+
+function closeSmtp() {
+  const current = smtp;
+  smtp = null;
+  if (current) {
+    clearTimeout(current.timer);
+    current.mailer.close().catch(() => {});
   }
+}
+
+/**
+ * En-tête From conforme (RFC 2047) : « Dani Inmigración » encodé SANS guillemets
+ * (worker-mailer met le nom encodé entre guillemets, que certains logiciels n'affichent pas).
+ */
+function fromHeader({ name, email }) {
+  if (!name) return email;
+  if (/^[\x20-\x7e]*$/.test(name)) return `"${name.replace(/["\\]/g, "\\$&")}" <${email}>`;
+  const bytes = new TextEncoder().encode(name);
+  return `=?UTF-8?B?${btoa(String.fromCharCode(...bytes))}?= <${email}>`;
+}
+
+async function deliverSmtp({ to, subject, html, text, unsubscribeUrl }) {
+  const from = parseAddress(config.mail.from);
+  const email = {
+    from,
+    to: { email: to },
+    subject,
+    html,
+    text,
+    headers: { From: fromHeader(from), ...unsubscribeHeaders(unsubscribeUrl) },
+  };
+  try {
+    await (await smtpConnection()).send(email);
+  } catch {
+    // Connexion fermée par le serveur entre deux envois : un nouvel essai avec une connexion neuve.
+    closeSmtp();
+    try {
+      await (await smtpConnection()).send(email);
+    } catch (err) {
+      closeSmtp();
+      throw err;
+    }
+  }
+  if (smtp) smtp.timer = setTimeout(closeSmtp, SMTP_IDLE_MS);
   return { messageId: null };
 }
 

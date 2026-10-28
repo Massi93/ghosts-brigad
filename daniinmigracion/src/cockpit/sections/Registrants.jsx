@@ -87,6 +87,17 @@ export default function Registrants() {
 
   useEffect(load, [load]);
 
+  // Mode d'envoi : en mode console (test), rien ne part réellement.
+  const [mailMode, setMailMode] = useState(null);
+  useEffect(() => {
+    api("/admin/overview")
+      .then((o) => setMailMode(o.mail?.mode ?? null))
+      .catch(() => {});
+  }, []);
+  const testMode = mailMode === "console";
+  const testModeRef = useRef(false);
+  testModeRef.current = testMode;
+
   // Message pré-rempli avec le prochain live (et réécrit au changement de langue s'il n'a pas été modifié).
   const target = live ?? next;
   const prefill = useRef({ subject: "", message: "" });
@@ -137,8 +148,12 @@ export default function Registrants() {
           entry.done = data;
           toast(
             t(
-              `Envío terminado: ${data.sent} enviados${data.failed ? `, ${data.failed} con error` : ""}`,
-              `Envoi terminé : ${data.sent} envoyé(s)${data.failed ? `, ${data.failed} en erreur` : ""}`
+              `Envío terminado: ${data.sent} enviados${data.failed ? `, ${data.failed} con error` : ""}${
+                testModeRef.current ? " (modo prueba: nadie los recibe)" : ""
+              }`,
+              `Envoi terminé : ${data.sent} envoyé(s)${data.failed ? `, ${data.failed} en erreur` : ""}${
+                testModeRef.current ? " (mode test : personne ne les reçoit)" : ""
+              }`
             ),
             data.failed ? "error" : "success"
           );
@@ -391,6 +406,14 @@ export default function Registrants() {
           <p className="flex items-center gap-2 font-display text-lg font-bold">
             <Mail className="h-5 w-5 text-site-red" /> {t("Notificar por email", "Prévenir par e-mail")}
           </p>
+          {testMode && (
+            <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900">
+              {t(
+                "Modo prueba: los correos NO se envían de verdad (se ven en Sitio → Correos de prueba). Para el envío real: npm run mail:setup (ver README).",
+                "Mode test : les e-mails ne partent PAS réellement (ils sont visibles dans Site → E-mails de test). Pour l'envoi réel : npm run mail:setup (voir README)."
+              )}
+            </p>
+          )}
           <Field label={t("Asunto", "Objet")}>
             <input className={inputClass} maxLength={150} value={subject} onChange={(e) => setSubject(e.target.value)} />
           </Field>

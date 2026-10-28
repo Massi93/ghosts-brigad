@@ -13,6 +13,7 @@
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && vite build",
     "deploy": "npm run build && wrangler deploy",
     "cockpit:password": "node scripts/cockpit-password.mjs",
+    "mail:setup": "node scripts/mail-setup.mjs",
     "build:demo": "vite build --config vite.demo.config.js"
   },
   "dependencies": {
