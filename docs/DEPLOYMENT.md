@@ -115,7 +115,7 @@ Deux workflows GitHub Actions sont fournis (`.github/workflows/`) :
 
 | Workflow | Déclencheur | Rôle |
 |---|---|---|
-| `fitflow-ci.yml` | push / PR sur `fitflow/**` | `flutter analyze` + `flutter test` |
+| `fitflow-ci.yml` | push / PR | `flutter analyze` + `flutter test` |
 | `fitflow-release.yml` | tag `v*` ou *Run workflow* | régénère le natif, génère icône+splash, build **APK + AAB**, publie les artefacts |
 
 Sans secret, le build de release utilise la signature *debug* (build valide pour

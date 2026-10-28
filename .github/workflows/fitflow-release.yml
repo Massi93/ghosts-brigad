@@ -29,9 +29,6 @@ jobs:
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: fitflow
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -94,7 +91,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fitflow-apk
-          path: fitflow/dist/*.apk
+          path: dist/*.apk
           if-no-files-found: error
 
       - name: Publish GitHub Release with the APK
@@ -109,5 +106,5 @@ jobs:
             L'app tourne en mode local (sans backend) : coach IA hors-ligne,
             données stockées sur l'appareil. Icône Flutter par défaut sur ce
             build de test.
-          files: fitflow/dist/*.apk
+          files: dist/*.apk
           fail_on_unmatched_files: true
