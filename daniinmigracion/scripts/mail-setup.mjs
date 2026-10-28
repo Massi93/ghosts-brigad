@@ -56,33 +56,44 @@ function cleanKey(value) {
 }
 
 /**
- * Essaie la clé auprès de Brevo AVANT de modifier quoi que ce soit :
- * clé existante, et expéditeur bien vérifié dans le compte.
+ * Essaie la clé auprès de Brevo AVANT de modifier quoi que ce soit.
+ * Un envoi vide (refusé par Brevo, donc rien ne part) montre si la clé existe et a le droit
+ * d'envoyer des e-mails transactionnels ; l'expéditeur est vérifié si la clé le permet.
  */
 async function checkBrevoKey(key, from) {
-  const call = (route) =>
-    fetch(`https://api.brevo.com/v3${route}`, { headers: { "api-key": key, accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
-  let account;
+  const call = (route, init = {}) =>
+    fetch(`https://api.brevo.com/v3${route}`, {
+      ...init,
+      headers: { "api-key": key, accept: "application/json", "content-type": "application/json" },
+      signal: AbortSignal.timeout(15_000),
+    });
+  let probe;
   try {
-    account = await call("/account");
+    probe = await call("/smtp/email", { method: "POST", body: "{}" });
   } catch {
     console.warn("⚠ Impossible de joindre Brevo pour vérifier la clé (connexion internet ?). On continue sans vérification.");
     return;
   }
-  if (account.status === 401 || account.status === 403) {
-    const data = await account.json().catch(() => ({}));
+  if (probe.status === 401 || probe.status === 403) {
+    const data = await probe.json().catch(() => ({}));
     fail(
-      `Brevo refuse cette clé : « ${data.message || account.status} ».\n` +
-        "Vérifie que tu as collé la NOUVELLE clé (Brevo → SMTP et API → Clés API), avec la permission « Transactional email »."
+      `Brevo refuse cette clé pour l'envoi d'e-mails : « ${data.message || probe.status} ».\n` +
+        "Colle la NOUVELLE clé (Brevo → SMTP et API → Clés API), avec la permission « Transactional email »."
     );
   }
+  // 400 attendu : la clé est acceptée, seul l'e-mail vide est refusé.
   const senders = await call("/senders")
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null);
-  const sender = senders?.senders?.find((x) => x.email?.toLowerCase() === from.toLowerCase());
-  if (senders && !sender) fail(`L'expéditeur ${from} n'existe pas dans ce compte Brevo (Brevo → Expéditeurs).`);
-  if (sender && sender.active === false) fail(`L'expéditeur ${from} n'est pas encore vérifié dans Brevo.`);
-  console.log(`✔ Clé Brevo valide${sender ? `, expéditeur ${from} vérifié` : ""}.`);
+  if (!senders) {
+    console.log("✔ Clé Brevo valide pour l'envoi d'e-mails.");
+    console.log(`  (cette clé ne peut pas lire la liste des expéditeurs : vérifie dans Brevo que ${from} est « Vérifié »)`);
+    return;
+  }
+  const sender = senders.senders?.find((x) => x.email?.toLowerCase() === from.toLowerCase());
+  if (!sender) fail(`L'expéditeur ${from} n'existe pas dans ce compte Brevo (Brevo → Expéditeurs).`);
+  if (sender.active === false) fail(`L'expéditeur ${from} n'est pas encore vérifié dans Brevo.`);
+  console.log(`✔ Clé Brevo valide, expéditeur ${from} vérifié.`);
 }
 
 function fail(message) {
