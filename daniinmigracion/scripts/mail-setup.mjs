@@ -55,6 +55,36 @@ function cleanKey(value) {
     .replace(/^["'`]+|["'`]+$/g, "");
 }
 
+/**
+ * Essaie la clé auprès de Brevo AVANT de modifier quoi que ce soit :
+ * clé existante, et expéditeur bien vérifié dans le compte.
+ */
+async function checkBrevoKey(key, from) {
+  const call = (route) =>
+    fetch(`https://api.brevo.com/v3${route}`, { headers: { "api-key": key, accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
+  let account;
+  try {
+    account = await call("/account");
+  } catch {
+    console.warn("⚠ Impossible de joindre Brevo pour vérifier la clé (connexion internet ?). On continue sans vérification.");
+    return;
+  }
+  if (account.status === 401 || account.status === 403) {
+    const data = await account.json().catch(() => ({}));
+    fail(
+      `Brevo refuse cette clé : « ${data.message || account.status} ».\n` +
+        "Vérifie que tu as collé la NOUVELLE clé (Brevo → SMTP et API → Clés API), avec la permission « Transactional email »."
+    );
+  }
+  const senders = await call("/senders")
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null);
+  const sender = senders?.senders?.find((x) => x.email?.toLowerCase() === from.toLowerCase());
+  if (senders && !sender) fail(`L'expéditeur ${from} n'existe pas dans ce compte Brevo (Brevo → Expéditeurs).`);
+  if (sender && sender.active === false) fail(`L'expéditeur ${from} n'est pas encore vérifié dans Brevo.`);
+  console.log(`✔ Clé Brevo valide${sender ? `, expéditeur ${from} vérifié` : ""}.`);
+}
+
 function fail(message) {
   console.error(`\n✖ ${message}\nRien n'a été modifié.`);
   process.exit(1);
@@ -102,6 +132,7 @@ if (flags.has("--console")) {
     const key = cleanKey(await ask("Clé Brevo (API « xkeysib-… » ou SMTP « xsmtpsib-… », masquée) : ", { hidden: true }));
     text = setVar(text, "MAIL_FROM", `${SENDER_NAME} <${from}>`);
     if (key.startsWith("xkeysib-")) {
+      await checkBrevoKey(key, from);
       // Clé API (onglet « Clés API ») : envoi par l'API HTTP de Brevo.
       text = setVar(text, "MAIL_MODE", "brevo");
       for (const name of ["SMTP_HOST", "SMTP_PORT", "SMTP_SECURE"]) text = removeVar(text, name);
